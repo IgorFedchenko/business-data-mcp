@@ -1,0 +1,6 @@
+title = "Business MCP synthetic reference"
+[extend]
+useDefault = true
+[allowlist]
+description = "Generated and local runtime files are not deliverable inputs"
+paths = ['''(^|/)obj/''', '''(^|/)bin/''', '''(^|/)\.data/''', '''(^|/)\.venv/''']

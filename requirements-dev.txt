@@ -1,0 +1,5 @@
+# Exact versions; local-only tooling. No model or hosted service client.
+ruff==0.14.0
+jsonschema==4.25.1
+PyYAML==6.0.3
+Pillow==12.0.0

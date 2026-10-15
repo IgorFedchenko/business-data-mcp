@@ -1,44 +1,58 @@
 #!/usr/bin/env python3
-"""Render a replay GIF from the real capture. Requires Pillow; makes no model calls."""
+"""Paginated replay from a genuine validated capture; makes no model calls."""
+
+import hashlib
 import json
 from pathlib import Path
 import textwrap
 from PIL import Image, ImageDraw, ImageFont
+from eval_contract import ROOT, check_answer, check_capture
 
-root = Path(__file__).resolve().parents[1]
-trace = json.loads((root / 'docs/demo-transcript.json').read_text())
-font_paths = ['/System/Library/Fonts/Menlo.ttc', '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf']
-font_path = next((p for p in font_paths if Path(p).exists()), None)
-font = ImageFont.truetype(font_path, 21) if font_path else ImageFont.load_default(size=21)
-small = ImageFont.truetype(font_path, 16) if font_path else ImageFont.load_default(size=16)
-width, height = 1120, 900
-steps = [('You', trace['prompt'])]
-for event in trace['events']:
-    if event['type'] == 'tool_call':
-        steps.append(('MCP tool call', event['name'].replace('mcp__business-data__', '') + '\n' + json.dumps(event['arguments'])))
-steps.append(('Claude', trace['answer']))
-frames = []
-for stage in range(1, len(steps) + 1):
-    frame = Image.new('RGB', (width, height), '#101827')
-    draw = ImageDraw.Draw(frame)
-    draw.rounded_rectangle((18, 16, width-18, height-16), radius=18, fill='#162235', outline='#30445e', width=2)
-    draw.text((44, 36), 'Business Data MCP  /  Claude Code', font=font, fill='#f3f7fd')
-    draw.text((44, 74), '.NET 8 + SQLite | real stdio tool calls | synthetic data', font=small, fill='#90b0ce')
-    y = 122
-    visible = steps[:stage]
-    for speaker, content in visible:
-        draw.text((44, y), speaker.upper(), font=small, fill='#67d9cc' if speaker != 'You' else '#e6b86a')
-        y += 26
-        for paragraph in content.replace('**', '').splitlines():
-            for line in textwrap.wrap(paragraph, width=77) or ['']:
-                if y > height-75:
-                    break
-                draw.text((44, y), line, font=font, fill='#e1eaf5')
-                y += 28
-        y += 18
-    draw.text((44, height-48), 'Recorded conversation replay; delays condensed. No refunds or external services.', font=small, fill='#90b0ce')
-    frames.append(frame)
-frames[0].save(root / 'docs/demo.gif', save_all=True, append_images=frames[1:],
-               duration=[2500]*(len(frames)-1)+[7000], loop=0, optimize=True)
-frames[-1].save(root / 'docs/demo.png')
-print('Rendered docs/demo.gif and docs/demo.png from the actual captured conversation.')
+
+def main():
+    trace = json.loads((ROOT / "docs/demo-transcript.json").read_text())
+    check_capture(trace)
+    assert hashlib.sha256(trace["answer"].encode()).hexdigest() == trace["answerSha256"]
+    check_answer(json.loads(trace["answer"]))
+    font_paths = ["/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"]
+    font_path = next((p for p in font_paths if Path(p).exists()), None)
+    font = ImageFont.truetype(font_path, 20) if font_path else ImageFont.load_default(size=20)
+    width, height = 1120, 900
+    steps = [("PROMPT", trace["prompt"]), ("CLAUDE — ORIGINAL COMPLETE ANSWER", trace["answer"])]
+    for event in trace["events"]:
+        if event["type"] == "tool_call":
+            steps.append(("ACTUAL READ TOOL CALL", event["name"] + "\n" + json.dumps(event["arguments"])))
+    steps.append(("SERVER AUDIT", json.dumps(trace["serverAudit"], indent=2)))
+    frames = []
+    for speaker, content in steps:
+        lines = [
+            line
+            for paragraph in content.splitlines()
+            for line in (textwrap.wrap(paragraph, width=82) or [""])
+        ]
+        for offset in range(0, max(1, len(lines)), 23):
+            frame = Image.new("RGB", (width, height), "#101827")
+            draw = ImageDraw.Draw(frame)
+            draw.text((36, 30), "Business Data MCP | Claude read-only assistant", font=font, fill="#f3f7fd")
+            draw.text(
+                (36, 78),
+                speaker + f"  ({offset // 23 + 1}/{max(1, (len(lines) + 22) // 23)})",
+                font=font,
+                fill="#67d9cc",
+            )
+            for index, line in enumerate(lines[offset : offset + 23]):
+                draw.text((36, 130 + index * 29), line, font=font, fill="#e1eaf5")
+            draw.text(
+                (36, 840),
+                "Actual conversation replay; delays condensed. Synthetic data. No writes.",
+                font=font,
+                fill="#90b0ce",
+            )
+            frames.append(frame)
+    frames[0].save(ROOT / "docs/demo.gif", save_all=True, append_images=frames[1:], duration=6000, loop=0)
+    frames[1].save(ROOT / "docs/demo.png")
+    print("Rendered complete paginated genuine read-only replay. Deterministic write demo is separate.")
+
+
+if __name__ == "__main__":
+    main()

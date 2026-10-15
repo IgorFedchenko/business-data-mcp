@@ -22,12 +22,8 @@
       "include": [
         "src/**",
         "tests/**",
-        "scripts/build.sh",
-        "scripts/run.sh",
-        "scripts/environment.sh",
-        "scripts/verify.sh",
-        "scripts/check-repository.py",
-        "scripts/protocol-demo.py",
+        "scripts/**",
+        "evals/**",
         "*.sln",
         "Directory.Build.props",
         "global.json",
@@ -35,14 +31,28 @@
         ".env.example",
         "LICENSE",
         "README.md",
+        "CHANGELOG.md",
         "docs/**",
-        "examples/**"
+        "examples/**",
+        "requirements-dev*",
+        "pyproject.toml",
+        ".editorconfig",
+        ".pre-commit-config.yaml",
+        ".gitleaks.toml",
+        "Dockerfile",
+        ".dockerignore",
+        ".github/**"
       ],
       "exclude": [
         "**/bin/**",
         "**/obj/**",
         "**/*.db*",
-        "**/TestResults/**"
+        "**/TestResults/**",
+        "docs/implementation-plan.md",
+        "docs/verification.md",
+        "docs/demo-transcript.json",
+        "docs/demo.gif",
+        "docs/demo.png"
       ]
     }
   ]

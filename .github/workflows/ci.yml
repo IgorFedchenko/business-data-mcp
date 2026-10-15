@@ -13,20 +13,30 @@ jobs:
     # Public standard runners are free. Private runs require the owner's free-tier confirmation.
     if: ${{ !github.event.repository.private || vars.PRIVATE_CI_FREE_TIER_CONFIRMED == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
       DOTNET_PROCESSOR_COUNT: '2'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 8.0.426
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
-      - name: Unit, in-memory MCP, HTTP and stdio acceptance
+      - name: Pinned local Python tooling
+        run: python3 -m pip install -r requirements-dev.lock
+      - name: Free standalone gitleaks CLI (no action license)
+        shell: bash
+        run: |
+          curl --fail --location --silent --show-error -o /tmp/gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz' | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/gitleaks-bin"
+          tar -xzf /tmp/gitleaks.tar.gz -C "$RUNNER_TEMP/gitleaks-bin" gitleaks
+          echo "$RUNNER_TEMP/gitleaks-bin" >> "$GITHUB_PATH"
+      - name: Format, build, tests, real-process acceptance, evals, template and Docker
         run: ./scripts/verify.sh
-      - name: Install, generate, build and run the dotnet new template
-        run: ./scripts/template-smoke.sh

@@ -1,0 +1,14 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "type":"object","additionalProperties":false,
+  "required":["customerId","customerName","orders"],
+  "properties":{
+    "customerId":{"type":"string","const":"CUST-001"},
+    "customerName":{"type":"string"},
+    "orders":{"type":"array","minItems":2,"maxItems":2,"items":{
+      "type":"object","additionalProperties":false,
+      "required":["id","status","totalCents","currency"],
+      "properties":{"id":{"type":"string"},"status":{"type":"string"},"totalCents":{"type":"integer"},"currency":{"type":"string"}}
+    }}
+  }
+}

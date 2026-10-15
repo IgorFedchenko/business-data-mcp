@@ -18,3 +18,7 @@ TestResults/
 /CLAUDE.md
 /docs/implementation-plan.md
 /docs/verification.md
+
+.venv/
+__pycache__/
+.ruff_cache/

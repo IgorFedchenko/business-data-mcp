@@ -1,0 +1,9 @@
+{
+  "provenance": "Manually authored synthetic requirements oracle; never generated from server output or seed at runtime.",
+  "orders": [
+    {"id":"ORD-1001","customerId":"CUST-001","customerName":"Avery Morgan","status":"delivered","totalCents":12990,"currency":"USD","placedAt":"2026-10-01T09:00:00Z"},
+    {"id":"ORD-1002","customerId":"CUST-001","customerName":"Avery Morgan","status":"shipped","totalCents":7990,"currency":"USD","placedAt":"2026-10-12T10:00:00Z"},
+    {"id":"ORD-1003","customerId":"CUST-002","customerName":"Jordan Lee","status":"delivered","totalCents":24900,"currency":"USD","placedAt":"2026-10-03T12:00:00Z"},
+    {"id":"ORD-1004","customerId":"CUST-003","customerName":"Taylor Quinn","status":"cancelled","totalCents":4500,"currency":"USD","placedAt":"2026-10-05T08:00:00Z"}
+  ]
+}

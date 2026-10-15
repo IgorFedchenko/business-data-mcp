@@ -1,0 +1,4 @@
+{
+  "provenance":"scripted: manually authored expected answer; not a recording or model response",
+  "answer":{"customerId":"CUST-001","customerName":"Avery Morgan","orders":[{"id":"ORD-1001","status":"delivered","totalCents":12990,"currency":"USD"},{"id":"ORD-1002","status":"shipped","totalCents":7990,"currency":"USD"}]}
+}

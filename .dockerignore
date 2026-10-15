@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+.codex
+.env
+.env.*
+**/bin
+**/obj
+.data
+artifacts
+.venv
+CLAUDE.md
+docs/implementation-plan.md
+docs/verification.md

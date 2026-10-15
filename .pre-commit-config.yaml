@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: repository-check
+        name: Repository/config checks
+        entry: python3 scripts/check-repository.py
+        language: system
+        pass_filenames: false
+      - id: ruff-check
+        name: Python lint
+        entry: python3 -m ruff check scripts
+        language: system
+        pass_filenames: false
+      - id: ruff-format
+        name: Python format
+        entry: python3 -m ruff format --check scripts
+        language: system
+        pass_filenames: false
+      - id: gitleaks
+        name: Free gitleaks CLI (working tree)
+        entry: gitleaks dir --redact --no-banner .
+        language: system
+        pass_filenames: false
