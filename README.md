@@ -1,8 +1,8 @@
 # Business Data MCP
 
-> Private implementation in progress. The initial build/test run is waiting for the
-> Studio queue; private GitHub CI awaits confirmation of free minutes and a $0 budget.
-> The Claude GIF has not been recorded yet. This is not a verified release.
+> WIP: development stopped for a process handoff. Compilation, runtime tests,
+> template execution and the Claude GIF are unverified. Private GitHub CI is gated
+> until free minutes and a $0 spending stop are confirmed. This is not a verified release.
 
 Give an AI assistant useful access to business data without handing it a SQL console
 or unrestricted write permissions.
