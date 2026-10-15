@@ -92,18 +92,11 @@ public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQu
             {
                 var safeMessage = "The operation could not be completed. Retry writes with the same idempotency key.";
                 var errorText = response.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
-                try
+                if (TryReadDomainError(errorText, out var decodedCode, out var decodedMessage))
                 {
-                    using var errorJson = JsonDocument.Parse(errorText ?? "{}");
-                    var code = errorJson.RootElement.GetProperty("code").GetString();
-                    if (code is "invalid_argument" or "not_found" or "ineligible_order" or "already_returned" or
-                        "forbidden" or "expired_confirmation" or "confirmation_required" or "already_consumed" or "idempotency_conflict")
-                    {
-                        resultCode = code;
-                        safeMessage = errorJson.RootElement.GetProperty("message").GetString()!;
-                    }
+                    resultCode = decodedCode;
+                    safeMessage = decodedMessage;
                 }
-                catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException) { }
                 outcome = resultCode == "forbidden" ? "denied" : "error";
                 response = Error(resultCode, safeMessage, correlationId);
             }
@@ -124,18 +117,11 @@ public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQu
         {
             resultCode = "invalid_argument";
             var message = "Arguments do not match the tool schema.";
-            try
+            if (TryReadDomainError(e.Message, out var decodedCode, out var decodedMessage))
             {
-                using var document = JsonDocument.Parse(e.Message);
-                var code = document.RootElement.GetProperty("code").GetString();
-                if (code is "invalid_argument" or "not_found" or "ineligible_order" or "already_returned" or
-                    "forbidden" or "expired_confirmation" or "confirmation_required" or "already_consumed" or "idempotency_conflict")
-                {
-                    resultCode = code;
-                    message = document.RootElement.GetProperty("message").GetString()!;
-                }
+                resultCode = decodedCode;
+                message = decodedMessage;
             }
-            catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException) { }
             outcome = resultCode == "forbidden" ? "denied" : "error";
             response = Error(resultCode, message, correlationId);
         }
@@ -170,6 +156,29 @@ public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQu
         IsError = true,
         Content = [new TextContentBlock { Text = JsonSerializer.Serialize(new { code, message, correlationId, originalCode }, Json) }]
     };
+
+    private static bool TryReadDomainError(string? text, out string code, out string message)
+    {
+        code = message = "";
+        if (text == null) return false;
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("code", out var codeValue) || codeValue.ValueKind != JsonValueKind.String ||
+                !root.TryGetProperty("message", out var messageValue) || messageValue.ValueKind != JsonValueKind.String)
+                return false;
+            var candidate = codeValue.GetString();
+            if (candidate is not ("invalid_argument" or "not_found" or "ineligible_order" or "already_returned" or
+                "forbidden" or "expired_confirmation" or "confirmation_required" or "already_consumed" or "idempotency_conflict"))
+                return false;
+            code = candidate;
+            message = messageValue.GetString()!;
+            return true;
+        }
+        catch (JsonException) { return false; }
+    }
 
     private static string? SafeResultMetadata(CallToolResult result)
     {

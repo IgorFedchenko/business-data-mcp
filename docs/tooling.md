@@ -1,6 +1,9 @@
 # Verification tooling
 
-Install .NET SDK 8.0.426, Python 3.11+ (CI uses 3.12), Docker and free gitleaks CLI 8.30.1.
+Server launch and focused .NET tests need .NET SDK 8.0.426 and Git. The lightweight
+stdio protocol smoke additionally needs Python 3; no LLM, Docker or PTY is needed.
+Full verification needs Linux/macOS with Unix PTY support, Python 3.11+ (CI uses 3.12),
+a running Docker daemon, OpenSSL and free gitleaks CLI 8.30.1.
 For isolated Python tools: `python3 -m venv .venv`, then
 `.venv/bin/python -m pip install -r requirements-dev.lock`. Optional pre-commit hooks use
 the same fast config, Ruff and gitleaks commands; install pre-commit separately.
@@ -24,9 +27,12 @@ for the complete acceptance entrypoint.
 
 `process-acceptance.py` is an independent raw JSON-RPC Python client; production hosts
 use the official SDK. In-memory and TestServer tests use actual official SDK clients.
-`evaluate.py` replays scripted scenarios and any actual capture present. Captured
-answer coverage remains absent until a genuine capture exists; offline pass alone
-does not satisfy demo readiness.
+`evaluate.py --require-capture` is the strict default used by verify/CI: missing or
+invalid genuine recorded replay fails before starting a host. Capture remains owner-
+authorized; CI never creates it. `evaluate.py --scripted-only` is an explicitly
+incomplete development mode that runs only scripted scenarios. It cannot satisfy
+full acceptance or demo readiness. The no-inference `check-demo-contracts.py` executes
+a local argv stub and proves missing config/recording fail without invoking Claude.
 
 Hosted private Actions remains disabled until free minutes and $0 stop are confirmed.
 A skipped job is not green. CodeQL is public-only; premium private code/secret scanning

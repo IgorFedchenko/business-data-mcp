@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/environment.sh
 python3 scripts/check-repository.py
+python3 scripts/check-demo-contracts.py
 python3 -m ruff check scripts
 python3 -m ruff format --check scripts
 ./scripts/secret-scan.sh
@@ -12,6 +13,6 @@ dotnet format BusinessData.sln --verify-no-changes --no-restore
 dotnet build BusinessData.sln -c Release --no-restore --nologo -m:2 -warnaserror
 dotnet test BusinessData.sln -c Release --no-build --nologo -m:2 --logger 'trx;LogFileName=tests.trx' --results-directory artifacts/test-results
 python3 scripts/process-acceptance.py
-python3 scripts/evaluate.py
+python3 scripts/evaluate.py --require-capture
 bash scripts/template-smoke-inner.sh
 python3 scripts/docker-smoke.py

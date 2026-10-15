@@ -17,7 +17,31 @@ def main():
     parser.add_argument(
         "--assembly", default="src/BusinessData.Server/bin/Release/net8.0/BusinessData.Server.dll"
     )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--require-capture",
+        dest="scripted_only",
+        action="store_false",
+        help="Full acceptance: genuine recorded replay is mandatory (default)",
+    )
+    mode.add_argument(
+        "--scripted-only",
+        dest="scripted_only",
+        action="store_true",
+        help="Incomplete development run; cannot satisfy full acceptance",
+    )
+    parser.set_defaults(scripted_only=False)
+    parser.add_argument("--capture", type=Path, default=ROOT / "docs/demo-transcript.json")
     args = parser.parse_args()
+    # Fail before starting any host if a required artifact is absent or invalid.
+    trace = None
+    if not args.scripted_only:
+        if not args.capture.is_file():
+            raise SystemExit(
+                "missing_recorded_capture: full acceptance requires a genuine Claude recording; no inference is run"
+            )
+        trace = json.loads(args.capture.read_text())
+        check_capture(trace)
     start = time.monotonic()
     corpus = json.loads((ROOT / "evals/scenarios.json").read_text())
     scenarios = corpus["cases"]
@@ -112,11 +136,8 @@ def main():
             pass
         else:
             raise AssertionError("negative answer control was accepted")
-    capture = ROOT / "docs/demo-transcript.json"
     captured = False
-    if capture.exists():
-        trace = json.loads(capture.read_text())
-        check_capture(trace)
+    if trace is not None:
         for mutation in ("hash", "budget", "provenance"):
             bad_trace = copy.deepcopy(trace)
             if mutation == "hash":
@@ -143,6 +164,8 @@ def main():
                 "scriptedAnswerValid": True,
                 "negativeControlsRejected": 6,
                 "capturedAnswerReplayed": captured,
+                "acceptanceComplete": not args.scripted_only,
+                "mode": "scripted_only_incomplete" if args.scripted_only else "strict_acceptance",
                 "elapsedSeconds": round(time.monotonic() - start, 3),
                 "modelTokens": None,
                 "modelCost": None,

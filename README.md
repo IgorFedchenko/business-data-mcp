@@ -54,8 +54,11 @@ in-memory integration tests. Business invariants live outside MCP, in `BusinessD
 ## Run in one command
 
 Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (8.0.426 or
-later 8.0.4xx patch), Python 3 for verification, and Git. No Docker,
-PostgreSQL, cloud account, LLM key or subscription is needed to run or test the server.
+later 8.0.4xx patch) and Git to launch the server or run focused .NET tests.
+Neither needs Docker, a cloud account or an LLM subscription. The small protocol smoke
+also needs Python 3. Full verification requires Linux/macOS (Unix PTY), Python 3.11+
+with pinned tooling, a running Docker daemon, OpenSSL and gitleaks. See
+[verification prerequisites](docs/tooling.md).
 
 ```bash
 git clone https://github.com/IgorFedchenko/business-data-mcp.git
@@ -76,12 +79,15 @@ For a deterministic protocol demonstration that needs no LLM:
 
 ```bash
 ./scripts/build.sh
-./scripts/verify.sh
+source scripts/environment.sh
+# On Studio run this process smoke through its heavy queue:
+~/.local/bin/studio-heavy-run -- python3 scripts/protocol-demo.py
+# On other hosts without the Studio wrapper: python3 scripts/protocol-demo.py
 ```
 
-This runs the actual stdio/Kestrel process, discovers tools, verifies denied writes,
-exercises the PTY operator adapter and checks durable restart replay. Install the
-[verification tools](docs/tooling.md) first; the complete suite includes Docker.
+This small no-LLM smoke starts real stdio, reads ORD-1001 and rejects a direct write.
+It needs no Docker, OpenSSL or Unix PTY. Full `./scripts/verify.sh` additionally runs
+Kestrel/PTY/restart, template, Docker and mandatory genuine captured-answer replay.
 
 ## Connect Claude
 
@@ -92,7 +98,7 @@ application's PATH. Restart Claude Desktop after editing its configuration.
 For Claude Code, adapt [the stdio config](examples/claude-code-stdio.json), then:
 
 ```bash
-claude --strict-mcp-config examples/claude-code-stdio.json
+claude --strict-mcp-config --mcp-config examples/claude-code-stdio.json
 ```
 
 The configurations explicitly disable writes and use separate local synthetic databases.
@@ -114,7 +120,8 @@ The endpoint is `http://127.0.0.1:5050/mcp`; `/health` returns a small health re
 Every MCP HTTP request requires `X-Api-Key`. A key in the URL is not accepted.
 See [the Claude Code HTTP config](examples/claude-code-http.json); export
 `MCP_READ_API_KEY` before starting Claude so its `${MCP_READ_API_KEY}` placeholder
-resolves. No secret is committed in the example.
+resolves, then launch with `claude --strict-mcp-config --mcp-config examples/claude-code-http.json`.
+No secret is committed in the example.
 
 This is deliberately **API-key authentication**, not an OAuth authorization server.
 Use loopback for development. Remote deployments need HTTPS, an explicit host
@@ -177,6 +184,12 @@ Read [the security and failure model](docs/security.md) for crash consistency,
 logging boundaries, trust assumptions and production hardening.
 
 ## Verify
+
+Full acceptance requires all tools/platform prerequisites above and an authorized genuine
+Claude capture checked into `docs/demo-transcript.json`. Missing recorded evidence fails
+the strict gate; CI never runs inference to create it. Before capture, an explicitly
+incomplete development check is `python3 scripts/evaluate.py --scripted-only` after build
+(on Studio run it through the heavy wrapper). It cannot satisfy full acceptance.
 
 ```bash
 ./scripts/verify.sh

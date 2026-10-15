@@ -5,16 +5,23 @@ no scripted answer is presented as a recording. Capture requires owner confirmat
 that included OAuth entitlement cannot incur additional charges. Authentication alone
 is insufficient. No model call runs in CI.
 
-Build/verify first, then, only after that confirmation:
+Build, run focused tests and the explicitly incomplete scripted-only eval first. Full
+verification needs the genuine capture, so it cannot pass yet. Only after the owner
+confirmation:
 
 ```bash
 source scripts/environment.sh
 python3 scripts/record-claude-demo.py --included-usage-confirmed
-python3 scripts/evaluate.py
+python3 scripts/evaluate.py --require-capture
 python3 scripts/render-demo.py
 ```
 
-The first command uses a read-only stdio host, a strict two-tool allowlist, at most six
+Before an authorized capture, run `python3 scripts/check-demo-contracts.py` to validate
+argv and the missing-record gate without authentication or inference. The capture
+loads its generated configuration using both boolean `--strict-mcp-config` and explicit
+`--mcp-config <path>`. Interactive example: `claude --strict-mcp-config --mcp-config examples/claude-code-stdio.json`.
+
+The recording command uses a read-only stdio host, a strict two-tool allowlist, at most six
 assistant turns/eight calls and a 120-second deadline. It rejects API-key billing,
 removes alternate-provider environment settings and preserves the actual final answer
 unchanged. Schema/factual validation must pass before it saves the capture. The prompt
