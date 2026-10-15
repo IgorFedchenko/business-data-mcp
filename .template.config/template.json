@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Igor Fedchenko",
+  "classifications": [
+    "MCP",
+    "Web",
+    "Console"
+  ],
+  "identity": "IgorFedchenko.BusinessDataMcp.CSharp",
+  "name": "Business Data MCP server with scoped tools and human approval",
+  "shortName": "business-mcp",
+  "sourceName": "BusinessData",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "include": [
+        "src/**",
+        "tests/**",
+        "scripts/build.sh",
+        "scripts/run.sh",
+        "scripts/environment.sh",
+        "scripts/verify.sh",
+        "scripts/check-repository.py",
+        "scripts/protocol-demo.py",
+        "*.sln",
+        "Directory.Build.props",
+        "global.json",
+        ".gitignore",
+        ".env.example",
+        "LICENSE",
+        "README.md",
+        "docs/**",
+        "examples/**"
+      ],
+      "exclude": [
+        "**/bin/**",
+        "**/obj/**",
+        "**/*.db*",
+        "**/TestResults/**"
+      ]
+    }
+  ]
+}

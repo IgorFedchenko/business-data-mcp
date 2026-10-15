@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "business-data": {
+      "type": "http",
+      "url": "http://127.0.0.1:5050/mcp",
+      "headers": { "X-Api-Key": "${MCP_READ_API_KEY}" }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+.env
+.env.*
+!.env.example
+.data/
+artifacts/
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+*.user
+.DS_Store

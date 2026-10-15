@@ -1,0 +1,32 @@
+name: Verify
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    # Public standard runners are free. Private runs require the owner's free-tier confirmation.
+    if: ${{ !github.event.repository.private || vars.PRIVATE_CI_FREE_TIER_CONFIRMED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      DOTNET_PROCESSOR_COUNT: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.426
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Unit, in-memory MCP, HTTP and stdio acceptance
+        run: ./scripts/verify.sh
+      - name: Install, generate, build and run the dotnet new template
+        run: ./scripts/template-smoke.sh

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "business-data": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["/ABSOLUTE/PATH/business-data-mcp/src/BusinessData.Server/bin/Release/net8.0/BusinessData.Server.dll", "--transport", "stdio"],
+      "env": {
+        "MCP_DATABASE": "/ABSOLUTE/PATH/business-data-mcp/.data/claude-code.db",
+        "MCP_ALLOW_WRITES": "false"
+      }
+    }
+  }
+}
