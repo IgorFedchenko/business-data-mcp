@@ -215,17 +215,28 @@ public sealed class SimulatedConnectionBoundaryTests
     public async Task RemotePlaintextCannotBePromotedByForwardedHeaders()
     {
         await using var session = await HttpSession.Start();
-        var response = await session.App.GetTestServer().SendAsync(context =>
+        async Task<int> Send(string remoteIp)
         {
-            context.Request.Method = "POST";
-            context.Request.Path = "/mcp";
-            context.Request.Scheme = "http";
-            context.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
-            context.Request.Headers["X-Api-Key"] = HttpSession.ReaderKey;
-            context.Request.Headers["X-Forwarded-Proto"] = "https";
-            context.Request.Headers["X-Forwarded-For"] = "127.0.0.1";
-        });
-        Assert.Equal(400, response.Response.StatusCode);
+            var response = await session.App.GetTestServer().SendAsync(context =>
+            {
+                context.Request.Method = "POST";
+                context.Request.Path = "/mcp";
+                context.Request.Scheme = "http";
+                context.Request.Host = new Microsoft.AspNetCore.Http.HostString("localhost");
+                context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
+                context.Request.Headers["X-Api-Key"] = HttpSession.ReaderKey;
+                context.Request.Headers["X-Forwarded-Proto"] = "https";
+                context.Request.Headers["X-Forwarded-For"] = "127.0.0.1";
+                context.Request.Headers.Accept = "application/json, text/event-stream";
+                context.Request.ContentType = "application/json";
+                var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", id = 1, method = "initialize", @params = new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "connection-probe", version = "1" } } });
+                context.Request.Body = new MemoryStream(bytes);
+                context.Request.ContentLength = bytes.Length;
+            });
+            return response.Response.StatusCode;
+        }
+        Assert.Equal(200, await Send("127.0.0.1"));
+        Assert.Equal(400, await Send("192.0.2.10"));
         Assert.Contains(session.Database.Store.ReadAudit(), row => row.ResultCode == "http_400");
     }
 
