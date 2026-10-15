@@ -1,5 +1,6 @@
 using System.IO.Pipelines;
 using BusinessData.Server;
+using BusinessData.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Client;
@@ -13,7 +14,7 @@ public sealed class PipeSession : IAsyncDisposable
     private IHost host = null!;
     public McpClient Client { get; private set; } = null!;
 
-    public static async Task<PipeSession> Start(bool writes = false, int limit = 30)
+    public static async Task<PipeSession> Start(bool writes = false, int limit = 30, Func<BusinessStore, IAuditSink>? auditFactory = null)
     {
         var session = new PipeSession();
         var input = new Pipe();
@@ -21,6 +22,7 @@ public sealed class PipeSession : IAsyncDisposable
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
         builder.Services.AddBusinessMcp(session.Database.Store, new("test:local", true, writes), limit)
             .WithStreamServerTransport(input.Reader.AsStream(), output.Writer.AsStream());
+        if (auditFactory != null) builder.Services.AddSingleton(auditFactory(session.Database.Store));
         session.host = builder.Build();
         await session.host.StartAsync();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));

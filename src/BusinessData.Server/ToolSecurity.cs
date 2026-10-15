@@ -31,7 +31,7 @@ public sealed class CallQuota(int permitLimit, TimeProvider? clock = null)
     }
 }
 
-public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQuota quota)
+public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQuota quota, IAuditSink? auditSink = null, ILogger<ToolSecurity>? logger = null)
 {
     public static readonly IReadOnlySet<string> ReadTools = new HashSet<string>
         { "search_orders", "get_order", "get_order_status", "get_customer_history" };
@@ -56,10 +56,26 @@ public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQu
         var actor = Resolve(context.User);
         var name = context.Params.Name;
         var knownTool = ReadTools.Contains(name) || WriteTools.Contains(name);
-        // Never put arbitrary tool names or argument values supplied by a caller into the audit log.
-        var auditId = store.BeginAudit(actor.Subject, knownTool ? name : "unknown_tool", Sanitize(context.Params.Arguments));
+        var correlationId = Guid.NewGuid().ToString("N");
+        var audit = auditSink ?? store;
+        var safeName = knownTool ? name : "unknown_tool";
+        using var activity = Telemetry.Activities.StartActivity("tools.call", ActivityKind.Server);
+        activity?.SetTag("tool.name", safeName);
+        activity?.SetTag("correlation.id", correlationId);
         var watch = Stopwatch.StartNew();
         string outcome = "error", resultCode = "internal_error";
+        string? metadata = null;
+        CallToolResult response;
+        try
+        {
+            audit.BeginAudit(actor.Subject, safeName, Sanitize(context.Params.Arguments), correlationId);
+        }
+        catch (Exception)
+        {
+            Telemetry.Record(safeName, "audit_unavailable", watch.ElapsedMilliseconds, activity);
+            logger?.LogError("Tool audit start failed. CorrelationId={CorrelationId} Tool={Tool} Code={Code}", correlationId, safeName, "audit_unavailable");
+            return Error("audit_unavailable", "Audit storage unavailable; operation was not executed.", correlationId);
+        }
         try
         {
             if (!quota.Acquire(actor.Subject))
@@ -68,43 +84,118 @@ public sealed class ToolSecurity(BusinessStore store, Caller localCaller, CallQu
             if (!CanDiscover(name, context.User))
                 throw new BusinessException("forbidden", "This principal does not have the required permission.");
             ValidateArguments(name, context.Params.Arguments);
-            var result = await next(context, cancellationToken);
-            outcome = result.IsError == true ? "error" : "success";
-            resultCode = result.IsError == true ? "tool_error" : "ok";
-            return result;
+            cancellationToken.ThrowIfCancellationRequested();
+            response = await next(context, cancellationToken);
+            outcome = response.IsError == true ? "error" : "success";
+            resultCode = response.IsError == true ? "internal_error" : "ok";
+            if (response.IsError == true)
+            {
+                var safeMessage = "The operation could not be completed. Retry writes with the same idempotency key.";
+                var errorText = response.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
+                try
+                {
+                    using var errorJson = JsonDocument.Parse(errorText ?? "{}");
+                    var code = errorJson.RootElement.GetProperty("code").GetString();
+                    if (code is "invalid_argument" or "not_found" or "ineligible_order" or "already_returned" or
+                        "forbidden" or "expired_confirmation" or "confirmation_required" or "already_consumed" or "idempotency_conflict")
+                    {
+                        resultCode = code;
+                        safeMessage = errorJson.RootElement.GetProperty("message").GetString()!;
+                    }
+                }
+                catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException) { }
+                outcome = resultCode == "forbidden" ? "denied" : "error";
+                response = Error(resultCode, safeMessage, correlationId);
+            }
+            if (outcome == "success") metadata = SafeResultMetadata(response);
         }
         catch (BusinessException e)
         {
             resultCode = e.Code;
             outcome = e.Code == "forbidden" ? "denied" : "error";
-            return Error(e.Code, e.Message);
+            response = Error(e.Code, e.Message, correlationId);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
             resultCode = "cancelled";
-            return Error("cancelled", "Call cancelled. Retry writes with the same idempotency key.");
+            response = Error(resultCode, "Call cancelled. Retry writes with the same idempotency key.", correlationId);
         }
-        catch (Exception e) when (e is ArgumentException or JsonException or McpException)
+        catch (McpException e)
         {
             resultCode = "invalid_argument";
-            return Error("invalid_argument", "Arguments do not match the tool schema.");
+            var message = "Arguments do not match the tool schema.";
+            try
+            {
+                using var document = JsonDocument.Parse(e.Message);
+                var code = document.RootElement.GetProperty("code").GetString();
+                if (code is "invalid_argument" or "not_found" or "ineligible_order" or "already_returned" or
+                    "forbidden" or "expired_confirmation" or "confirmation_required" or "already_consumed" or "idempotency_conflict")
+                {
+                    resultCode = code;
+                    message = document.RootElement.GetProperty("message").GetString()!;
+                }
+            }
+            catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException) { }
+            outcome = resultCode == "forbidden" ? "denied" : "error";
+            response = Error(resultCode, message, correlationId);
+        }
+        catch (Exception e) when (e is ArgumentException or JsonException)
+        {
+            resultCode = "invalid_argument";
+            response = Error(resultCode, "Arguments do not match the tool schema.", correlationId);
         }
         catch (Exception)
         {
-            return Error("internal_error", "The operation could not be completed. Retry writes with the same idempotency key.");
+            response = Error(resultCode, "The operation could not be completed. Retry writes with the same idempotency key.", correlationId);
         }
-        finally
+        // Completion is deliberately outside finally: a storage fault cannot replace a safe response.
+        var originalCode = resultCode;
+        try { audit.FinishAudit(correlationId, outcome, resultCode, watch.ElapsedMilliseconds, metadata); }
+        catch (Exception)
         {
-            // A started record is durable before execution. Audit storage failure never silently succeeds.
-            store.FinishAudit(auditId, outcome, resultCode, watch.ElapsedMilliseconds);
+            var uncertain = WriteTools.Contains(name) && (outcome == "success" || resultCode is "internal_error" or "cancelled");
+            resultCode = uncertain ? "outcome_unknown" : "audit_unavailable";
+            response = Error(resultCode, uncertain
+                ? "The write may have committed. Reuse the original idempotency key to recover its result."
+                : "Audit completion failed; see originalCode for the operation outcome.", correlationId, originalCode);
         }
+        Telemetry.Record(safeName, resultCode, watch.ElapsedMilliseconds, activity);
+        logger?.LogInformation("Tool completed. CorrelationId={CorrelationId} Tool={Tool} Code={Code} OriginalCode={OriginalCode} DurationMs={DurationMs}",
+            correlationId, safeName, resultCode, originalCode, watch.ElapsedMilliseconds);
+        return response;
     }
 
-    private static CallToolResult Error(string code, string message) => new()
+    private static CallToolResult Error(string code, string message, string correlationId, string? originalCode = null) => new()
     {
         IsError = true,
-        Content = [new TextContentBlock { Text = JsonSerializer.Serialize(new { code, message }, Json) }]
+        Content = [new TextContentBlock { Text = JsonSerializer.Serialize(new { code, message, correlationId, originalCode }, Json) }]
     };
+
+    private static string? SafeResultMetadata(CallToolResult result)
+    {
+        // SDK typed tool responses are JSON text. Retain only validated synthetic identities/counts.
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
+        if (text == null) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            var root = document.RootElement;
+            var safe = new Dictionary<string, object>();
+            if (root.ValueKind == JsonValueKind.Array) safe["count"] = root.GetArrayLength();
+            else if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (root.TryGetProperty("intent", out var intent)) root = intent;
+                foreach (var field in new[] { "id", "orderId", "intentId" })
+                    if (root.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String &&
+                        Regex.IsMatch(value.GetString()!, "^(ORD-[0-9]{4}|RI-[a-f0-9]{32}|RET-[a-f0-9]{32})$", RegexOptions.CultureInvariant))
+                        safe[field] = value.GetString()!;
+                if (root.TryGetProperty("orders", out var orders) && orders.ValueKind == JsonValueKind.Array)
+                    safe["orderCount"] = orders.GetArrayLength();
+            }
+            return JsonSerializer.Serialize(safe, Json);
+        }
+        catch (JsonException) { return null; }
+    }
 
     private static void ValidateArguments(string name, IDictionary<string, JsonElement>? args)
     {

@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 namespace BusinessData.Core;
 
 /// <summary>Small, single-tenant SQLite reference store. No network or payment side effects.</summary>
-public sealed class BusinessStore
+public sealed class BusinessStore : IAuditSink
 {
     private readonly string connectionString;
     private readonly string databasePath;
@@ -64,6 +64,19 @@ public sealed class BusinessStore
                 arguments TEXT NOT NULL, outcome TEXT NOT NULL, result_code TEXT, duration_ms INTEGER);
             """);
         cmd.ExecuteNonQuery();
+        // Additive migration keeps an existing local reference database usable.
+        using (var columns = Command(db, "PRAGMA table_info(audit)"))
+        using (var reader = columns.ExecuteReader())
+        {
+            var hasMetadata = false;
+            while (reader.Read()) hasMetadata |= reader.GetString(1) == "result_metadata";
+            reader.Close();
+            if (!hasMetadata)
+            {
+                using var migration = Command(db, "ALTER TABLE audit ADD COLUMN result_metadata TEXT");
+                migration.ExecuteNonQuery();
+            }
+        }
         if (!OperatingSystem.IsWindows())
         {
             foreach (var suffix in new[] { "", "-wal", "-shm" })
@@ -264,33 +277,33 @@ public sealed class BusinessStore
             throw new BusinessException("expired_confirmation", "Intent expired. Prepare a new intent with a new key.");
     }
 
-    public string BeginAudit(string actor, string tool, string safeArguments)
+    public string BeginAudit(string actor, string tool, string safeArguments, string? correlationId = null)
     {
         using var db = Open();
-        var id = Guid.NewGuid().ToString("N");
+        var id = correlationId ?? Guid.NewGuid().ToString("N");
         using var cmd = Command(db, "INSERT INTO audit(id,timestamp,actor,tool,arguments,outcome) VALUES(@id,@now,@actor,@tool,@args,'started')", null,
             ("@id", id), ("@now", Stamp(clock.GetUtcNow())), ("@actor", actor), ("@tool", tool), ("@args", safeArguments));
         cmd.ExecuteNonQuery();
         return id;
     }
 
-    public void FinishAudit(string id, string outcome, string resultCode, long durationMs)
+    public void FinishAudit(string id, string outcome, string resultCode, long durationMs, string? resultMetadata = null)
     {
         using var db = Open();
-        using var cmd = Command(db, "UPDATE audit SET outcome=@outcome,result_code=@code,duration_ms=@duration WHERE id=@id", null,
-            ("@outcome", outcome), ("@code", resultCode), ("@duration", durationMs), ("@id", id));
+        using var cmd = Command(db, "UPDATE audit SET outcome=@outcome,result_code=@code,duration_ms=@duration,result_metadata=@metadata WHERE id=@id", null,
+            ("@outcome", outcome), ("@code", resultCode), ("@duration", durationMs), ("@metadata", resultMetadata), ("@id", id));
         cmd.ExecuteNonQuery();
     }
 
     public IReadOnlyList<AuditEntry> ReadAudit(int limit = 20)
     {
         using var db = Open();
-        using var cmd = Command(db, "SELECT id,timestamp,actor,tool,arguments,outcome,result_code,duration_ms FROM audit ORDER BY rowid DESC LIMIT @limit", null,
+        using var cmd = Command(db, "SELECT id,timestamp,actor,tool,arguments,outcome,result_code,duration_ms,result_metadata FROM audit ORDER BY rowid DESC LIMIT @limit", null,
             ("@limit", Math.Clamp(limit, 1, 100)));
         using var r = cmd.ExecuteReader();
         var entries = new List<AuditEntry>();
         while (r.Read()) entries.Add(new(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.GetString(5),
-            r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetInt64(7)));
+            r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetInt64(7), r.IsDBNull(8) ? null : r.GetString(8)));
         return entries;
     }
 

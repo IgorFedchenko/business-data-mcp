@@ -56,16 +56,16 @@ try
 }
 catch (BusinessException e)
 {
-    Console.Error.WriteLine($"{e.Code}: {e.Message}");
+    Console.Error.WriteLine(JsonSerializer.Serialize(new { code = e.Code, message = e.Message }));
     return 1;
 }
-catch (InvalidOperationException e)
+catch (InvalidOperationException)
 {
-    Console.Error.WriteLine(e.Message);
+    Console.Error.WriteLine(JsonSerializer.Serialize(new { code = "configuration_error", message = "Check transport, limits, distinct HTTP keys and database configuration." }));
     return 1;
 }
 catch (Exception)
 {
-    Console.Error.WriteLine("Startup or storage failed. Check local configuration and database access.");
+    Console.Error.WriteLine(JsonSerializer.Serialize(new { code = "startup_error", message = "Check local configuration and database access." }));
     return 1;
 }

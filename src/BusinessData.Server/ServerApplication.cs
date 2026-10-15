@@ -16,8 +16,10 @@ public static class ServerApplication
     {
         var builder = Host.CreateApplicationBuilder(args);
         builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
+        builder.Logging.AddJsonConsole();
+        builder.Services.Configure<Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
         builder.Logging.AddFilter("ModelContextProtocol", LogLevel.None);
+        if (builder.Configuration["MCP_TELEMETRY_CONSOLE"] == "true") Telemetry.EnableSafeConsole();
         var store = new BusinessStore(builder.Configuration["MCP_DATABASE"] ?? DatabasePath);
         store.Initialize();
         builder.Services.AddBusinessMcp(store, new("stdio:local", true, builder.Configuration["MCP_ALLOW_WRITES"] == "true"),
@@ -30,12 +32,14 @@ public static class ServerApplication
         var builder = WebApplication.CreateBuilder(args);
         configure?.Invoke(builder);
         builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
+        builder.Logging.AddJsonConsole();
+        builder.Services.Configure<Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
         // SDK request/argument tracing must never be enabled by a caller's logging preferences.
         builder.Logging.AddFilter("ModelContextProtocol", LogLevel.None);
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
         var writes = builder.Configuration["MCP_ALLOW_WRITES"] == "true";
         var toolLimit = ReadLimit(builder.Configuration, "MCP_TOOL_LIMIT", 30);
+        if (builder.Configuration["MCP_TELEMETRY_CONSOLE"] == "true") Telemetry.EnableSafeConsole();
         var store = new BusinessStore(builder.Configuration["MCP_DATABASE"] ?? DatabasePath);
         store.Initialize();
         var mcp = builder.Services.AddBusinessMcp(store, new("anonymous", false, false), toolLimit);
@@ -83,8 +87,16 @@ public static class ServerApplication
                 else await next(context);
                 if (context.Response.StatusCode >= 400)
                 {
-                    var id = store.BeginAudit(context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous", "http.access", "{}");
-                    store.FinishAudit(id, "denied", "http_" + context.Response.StatusCode, 0);
+                    try
+                    {
+                        var id = store.BeginAudit(context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous", "http.access", "{}");
+                        store.FinishAudit(id, "denied", "http_" + context.Response.StatusCode, 0);
+                    }
+                    catch (Exception)
+                    {
+                        // The rejection remains a rejection even if its audit cannot be persisted.
+                        app.Logger.LogError("HTTP rejection audit unavailable. Code={Code}", "audit_unavailable");
+                    }
                 }
             }
             else await next(context);

@@ -10,6 +10,7 @@ public static class McpRegistration
         BusinessStore store, Caller localCaller, int toolLimit = 30)
     {
         services.AddSingleton(store);
+        services.AddSingleton<IAuditSink>(store);
         services.AddSingleton(localCaller);
         services.AddSingleton(new CallQuota(toolLimit));
         services.AddSingleton<ToolSecurity>();
