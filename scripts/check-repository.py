@@ -15,7 +15,9 @@ for path in ROOT.rglob("*"):
         continue
     if path.suffix in {".cs", ".py", ".sh", ".json", ".yml", ".yaml", ".toml"}:
         contents = path.read_text()
-        assert contents.endswith("\n"), f"missing final newline: {path}"
+        # NuGet emits lockfiles without a final newline; preserve generated formatting.
+        if path.name != "packages.lock.json":
+            assert contents.endswith("\n"), f"missing final newline: {path}"
         assert all(line == line.rstrip() for line in contents.splitlines()), f"trailing whitespace: {path}"
     if path.suffix == ".json":
         json.loads(path.read_text())

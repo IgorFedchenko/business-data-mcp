@@ -92,3 +92,45 @@ add retention, backup/restore and tamper-resistant logging for a production syst
 
 No API keys, LLM API keys, employer/client datasets, real customers or external service
 credentials are included. Tests and the deterministic protocol demo call no LLM.
+
+## Audit failure outcomes and telemetry
+
+A correlation ID is generated before persistence. Start failure returns
+`audit_unavailable` and never executes the tool. Completion failure after a successful
+read, denied or invalid operation returns `audit_unavailable` with `originalCode`.
+After a successful write it returns `outcome_unknown` and instructs reuse of the
+original key. Crash/cancellation/disconnect may prevent response delivery. See
+[the audit decision](adr/0003-audit-idempotency.md) for the exact separate-transaction
+limitation. Successful audit metadata retains validated returned IDs/counts; result
+bodies/customer names are excluded. Disposition is omitted where not known.
+
+JSON logging and optional `BusinessData.Mcp` ActivitySource/Meter events include safe
+tool, code, duration and correlation only. No outbound exporter runs by default.
+`MCP_TELEMETRY_CONSOLE=true` enables a safe local stderr listener. SDK wire logging is
+disabled. Internal dependency-injected storage seams support fault tests; no public
+HTTP/MCP/environment failure switch exists.
+
+## Return flow
+
+```mermaid
+sequenceDiagram
+    participant C as Scoped writer client
+    participant S as MCP server
+    participant O as Trusted human operator CLI
+    participant D as SQLite
+    C->>S: prepare_return(order, reason, preparation key)
+    S->>D: Atomic immutable intent + actor/key binding
+    S-->>C: RI identity + ten-minute expiry
+    C->>S: request_return before approval
+    S-->>C: confirmation_required
+    O->>D: Review action and type full RI identity
+    C->>S: request_return(RI, submission key)
+    S->>D: Atomic ticket + consumption + retry binding
+    S-->>C: RET identity
+    C->>S: Retry same key (including after restart)
+    S->>D: Read durable previous result
+    S-->>C: Same RET identity
+```
+
+The server cannot perform the operator step over MCP. Local shell/database owners
+remain trusted; automated PTY acceptance tests exercise the adapter, not human identity.

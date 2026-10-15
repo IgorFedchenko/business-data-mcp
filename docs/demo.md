@@ -1,28 +1,43 @@
-# Demo provenance
+# Demo provenance and reproduction
 
-The intended visual artifact is a **rendered replay of real Claude Code tool calls**,
-with delays condensed. It is not a simulated Claude answer or a live screen recording.
-Only synthetic data is eligible for this capture.
+The server makes no model calls. The genuine Claude recording/GIF is currently absent;
+no scripted answer is presented as a recording. Capture requires owner confirmation
+that included OAuth entitlement cannot incur additional charges. Authentication alone
+is insufficient. No model call runs in CI.
 
-## Capture
+Build/verify first, then, only after that confirmation:
 
-1. Build the server with `./scripts/build.sh`.
-2. Use an existing first-party Claude OAuth login. The recording script refuses API-key
-   authentication. Any new paid usage or model key requires separate owner approval.
-3. Run `python3 scripts/record-claude-demo.py`.
-4. Review `docs/demo-transcript.json`. It contains only the user prompt, allowlisted
-   read-tool calls/results, final answer, model name and sanitized server audit.
-   Raw CLI initialization, account metadata, system prompts and credentials are not stored.
-5. Install Pillow in an isolated Python environment if needed, then run
-   `python3 scripts/render-demo.py` to create `docs/demo.gif` and `docs/demo.png`.
+```bash
+source scripts/environment.sh
+python3 scripts/record-claude-demo.py --included-usage-confirmed
+python3 scripts/evaluate.py
+python3 scripts/render-demo.py
+```
 
-The recorder uses a temporary database and a strict MCP configuration that connects
-only this server. Built-in tools, file access, shell execution, agents and write tools
-are unavailable. Both `get_order` and `get_customer_history` must have successful
-server audit rows; otherwise the recording is rejected. No LLM call occurs in CI.
+The first command uses a read-only stdio host, a strict two-tool allowlist, at most six
+assistant turns/eight calls and a 120-second deadline. It rejects API-key billing,
+removes alternate-provider environment settings and preserves the actual final answer
+unchanged. Schema/factual validation must pass before it saves the capture. The prompt
+is versioned in `evals/prompts/read-support-v1.txt`. The recording contains prompt/answer
+hashes, product commit, fixture hash, actual calls and safe audit correlations. No raw
+session initialization, account metadata, secrets or system transcript is saved.
 
-## Deterministic smoke
+Observed usage is retained only when exposed by the client. Cost stays null with its
+reason; offline replay is not a measured token/cost benchmark. Review the sanitized
+capture before adding it to the repository. The paginated renderer labels its output
+as a replay and shows the entire original answer early; it never synthesizes speech.
 
-`python3 scripts/protocol-demo.py` speaks real MCP JSON-RPC to a fresh stdio server.
-It checks initialization, discovery, an actual order query and a direct unauthorized
-write rejection. This checks protocol behavior independently of any model response.
+The separate deterministic client demonstrates write denial, preparation, **human
+operator adapter** approval, submission and same-key restart retry:
+
+```bash
+# On Studio, this is a heavy real-process check:
+~/.local/bin/studio-heavy-run -- bash -c 'source scripts/environment.sh; python3 scripts/process-acceptance.py'
+```
+
+The PTY is automated test composition, not proof that a real person watched that run.
+For a human demo use README's separate-terminal workflow. Claude never receives shell
+access or approves its own intent. No payment is issued.
+
+Authored `evals/fixtures/scripted-answer.json` and scenario decisions explicitly say
+scripted. They are useful offline contract fixtures and are never relabelled Claude.

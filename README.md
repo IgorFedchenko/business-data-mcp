@@ -1,8 +1,10 @@
 # Business Data MCP
 
-> WIP: development stopped for a process handoff. Compilation, runtime tests,
-> template execution and the Claude GIF are unverified. Private GitHub CI is gated
-> until free minutes and a $0 spending stop are confirmed. This is not a verified release.
+> Reference implementation under verification. Runtime/build/template/Docker results
+> and the genuine Claude GIF are pending; private CI remains cost-gated. No release
+> readiness or executed-green-CI claim is made.
+
+[MIT](LICENSE) · [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0) · [CI runs](https://github.com/IgorFedchenko/business-data-mcp/actions)
 
 Give an AI assistant useful access to business data without handing it a SQL console
 or unrestricted write permissions.
@@ -25,7 +27,7 @@ Try asking:
 
 > What is the status of ORD-1001, and what other orders has this customer placed?
 
-Expected facts from the seed: Avery Morgan; ORD-1001 is delivered ($129.90 USD);
+Independent synthetic fixture facts: Avery Morgan; ORD-1001 is delivered ($129.90 USD);
 ORD-1002 is shipped ($79.90 USD). All people and transactions are fictional.
 
 ## Architecture
@@ -74,11 +76,12 @@ For a deterministic protocol demonstration that needs no LLM:
 
 ```bash
 ./scripts/build.sh
-python3 scripts/protocol-demo.py
+./scripts/verify.sh
 ```
 
-This starts the actual server, discovers its four read-only tools, reads an order,
-and verifies that a direct call to a write tool is denied.
+This runs the actual stdio/Kestrel process, discovers tools, verifies denied writes,
+exercises the PTY operator adapter and checks durable restart replay. Install the
+[verification tools](docs/tooling.md) first; the complete suite includes Docker.
 
 ## Connect Claude
 
@@ -182,12 +185,35 @@ logging boundaries, trust assumptions and production hardening.
 
 Verification runs unit tests, concurrent idempotency tests, actual MCP clients and
 servers connected by in-memory pipes, HTTP tests through ASP.NET's in-memory test
-server, and a real stdio subprocess smoke test. All fixtures use temporary SQLite
+server, and actual stdio/Kestrel subprocesses with an independent JSON-RPC client,
+PTY operator path, restart and direct SQLite assertions. It also runs strict scripted
+evals against a manually frozen oracle, lint/format, secret scans, template and Docker. All fixtures use temporary SQLite
 databases. No real secrets, paid services or model calls are required.
 
 GitHub Actions uses the same locked dependencies and verification commands. Private
 CI must stay within the owner's included minutes and a zero-spend budget. No cache
 or build artifact uploads are necessary. See the Actions tab for commit-specific results.
+
+## Observability and Docker
+
+JSON diagnostics go to stderr; audit stores safe counts/identities and stable outcome
+codes, never result bodies or search/retry keys. Correlation IDs connect errors, audit
+and optional spans. `MCP_TELEMETRY_CONSOLE=true` opts into safe local span JSON.
+`BusinessData.Mcp` ActivitySource/Meter support OpenTelemetry listeners; no exporter
+or outbound trace traffic is configured by default.
+
+```bash
+# On Studio put Docker build/run checks through studio-heavy-run.
+docker build -t business-data-mcp .
+# Inject MCP_READ_API_KEY from an ignored --env-file; never bake secrets into an image.
+# Default HTTP accepts loopback peers only. Remote/container bridge peers need HTTPS.
+docker run --rm --network host --env-file .env -v business-mcp-data:/data business-data-mcp
+```
+
+Host networking is a Linux example; Docker Desktop/network-bridge deployments need
+explicit HTTPS configuration. The Docker smoke fixture uses local TLS and a temporary
+certificate. See [tooling](docs/tooling.md), [security](docs/security.md) and the
+[architecture decisions](docs/adr/0001-storage.md).
 
 ## Start your own server
 
@@ -226,7 +252,8 @@ per delivered order and a local operator are intentional scope choices. There is
 PostgreSQL adapter, Google Sheets integration, OAuth provider, payment gateway,
 production SLA, distributed rate limiting, tamper-evident audit or public hosted backend.
 The dataset is synthetic. This repository contains no employer/client code or identities.
-The demo is a repository asset, so it has no hosting cost.
+The planned demo is a repository asset; there is no paid hosting. .NET 8 is the
+requested target, not a claim of indefinitely supported production runtime.
 
 Built against the [official C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)
 2.2.0; API patterns checked at upstream commit

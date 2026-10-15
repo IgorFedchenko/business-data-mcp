@@ -1,8 +1,10 @@
-# Upwork portfolio copy
+# Portfolio description draft
+
+Runtime verification and genuine demo evidence are pending. Use after those gates pass.
 
 **Title (56 characters):** Secure .NET MCP Server for Orders, Customers and Returns
 
-**Description:** Built a working MCP reference implementation that lets AI assistants
+**Description:** Built an MCP reference implementation that lets AI assistants
 query orders and customer history and request returns with scoped write access and
 separate human approval. Uses C#/.NET 8, the official MCP SDK, SQLite, stdio and
 Streamable HTTP, with API-key authentication, redacted audit logs, rate limits,
