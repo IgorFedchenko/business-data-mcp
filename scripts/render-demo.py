@@ -11,7 +11,7 @@ font_paths = ['/System/Library/Fonts/Menlo.ttc', '/usr/share/fonts/truetype/deja
 font_path = next((p for p in font_paths if Path(p).exists()), None)
 font = ImageFont.truetype(font_path, 21) if font_path else ImageFont.load_default(size=21)
 small = ImageFont.truetype(font_path, 16) if font_path else ImageFont.load_default(size=16)
-width, height = 1120, 700
+width, height = 1120, 900
 steps = [('You', trace['prompt'])]
 for event in trace['events']:
     if event['type'] == 'tool_call':

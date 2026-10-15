@@ -65,7 +65,11 @@ public sealed class BusinessStore
             """);
         cmd.ExecuteNonQuery();
         if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(databasePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        {
+            foreach (var suffix in new[] { "", "-wal", "-shm" })
+                if (File.Exists(databasePath + suffix))
+                    File.SetUnixFileMode(databasePath + suffix, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
         using var tx = db.BeginTransaction();
         using var seed = Command(db, """
             INSERT OR IGNORE INTO customers VALUES

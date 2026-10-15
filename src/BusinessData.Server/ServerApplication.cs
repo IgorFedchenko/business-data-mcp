@@ -59,7 +59,7 @@ public static class ServerApplication
                 }));
             options.OnRejected = (context, _) =>
             {
-                context.HttpContext.Response.Headers.RetryAfter = "60";
+                context.HttpContext.Response.Headers["Retry-After"] = "60";
                 return ValueTask.CompletedTask;
             };
         });
@@ -70,7 +70,7 @@ public static class ServerApplication
         app.Use(async (context, next) =>
         {
             context.Response.Headers.CacheControl = "no-store";
-            context.Response.Headers.XContentTypeOptions = "nosniff";
+            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
             if (context.Request.Path.StartsWithSegments("/mcp"))
             {
                 if (!context.Request.IsHttps && context.Connection.RemoteIpAddress is { } ip && !IPAddress.IsLoopback(ip))

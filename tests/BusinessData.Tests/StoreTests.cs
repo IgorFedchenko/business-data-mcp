@@ -10,7 +10,7 @@ public sealed class TestClock : TimeProvider
 
 public sealed class TestDatabase : IDisposable
 {
-    private readonly string directory = Path.Combine(Path.GetTempPath(), "business-mcp-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "business-mcp-tests-" + Guid.NewGuid().ToString("N"));
     public string Path { get; }
     public TestClock Clock { get; } = new();
     public BusinessStore Store { get; }
