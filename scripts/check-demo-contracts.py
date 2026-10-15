@@ -22,11 +22,12 @@ def main():
         config = fixture / "mcp.json"
         config.write_text(
             json.dumps(
-                {
-                    "mcpServers": {
-                        "business-data": {"command": "never-executed", "env": {"MCP_ALLOW_WRITES": "false"}}
-                    }
-                }
+                capture.capture_mcp_config(
+                    fixture / "synthetic.dll",
+                    fixture / "synthetic.db",
+                    fixture / "budget.db",
+                    fixture / "owner-group",
+                )
             )
         )
         stub = fixture / "claude_stub.py"
@@ -40,7 +41,12 @@ assert args.count("--mcp-config") == 1
 config=Path(args[args.index("--mcp-config")+1])
 loaded=json.loads(config.read_text())
 assert set(loaded["mcpServers"]) == {"business-data"}
-assert loaded["mcpServers"]["business-data"]["env"]["MCP_ALLOW_WRITES"] == "false"
+server=loaded["mcpServers"]["business-data"]
+assert server["env"]["MCP_ALLOW_WRITES"] == "false"
+assert server["command"] == sys.executable
+assert Path(server["args"][0]).name == "capture-stdio-proxy.py"
+assert "--budget-file" in server["args"] and "--owner-group-file" in server["args"]
+assert server["args"][-2:] == ["--transport","stdio"]
 assert set(args[args.index("--allowedTools")+1].split(",")) == {"mcp__business-data__get_order","mcp__business-data__get_customer_history"}
 for flag,value in {"--tools":"", "--setting-sources":"", "--permission-mode":"dontAsk", "--max-turns":"6", "--output-format":"stream-json"}.items():
     assert args[args.index(flag)+1] == value, flag

@@ -14,6 +14,8 @@ import subprocess
 import tempfile
 import threading
 import time
+import sys
+from capture_guard import RunBudget, publish_owned_group, stop_owned_group
 from eval_contract import ROOT, check_answer, check_capture
 
 
@@ -54,6 +56,29 @@ def capture_command(prompt, config):
     ]
 
 
+def capture_mcp_config(assembly, database, budget_file, owner_group):
+    return {
+        "mcpServers": {
+            "business-data": {
+                "command": sys.executable,
+                "args": [
+                    str(ROOT / "scripts/capture-stdio-proxy.py"),
+                    "--budget-file",
+                    str(budget_file),
+                    "--owner-group-file",
+                    str(owner_group),
+                    "--",
+                    shutil.which("dotnet"),
+                    str(assembly),
+                    "--transport",
+                    "stdio",
+                ],
+                "env": {"MCP_DATABASE": str(database), "MCP_ALLOW_WRITES": "false"},
+            }
+        }
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -78,49 +103,54 @@ def main():
     prompt_path = ROOT / "evals/prompts/read-support-v1.txt"
     prompt = prompt_path.read_text()
     assembly = ROOT / "src/BusinessData.Server/bin/Release/net8.0/BusinessData.Server.dll"
-    assert assembly.is_file(), "Build and verify first"
+    assert assembly.is_file(), "Build and run focused scripted checks before capture"
     allowed = ALLOWED_TOOLS
     with tempfile.TemporaryDirectory(prefix="business-claude-") as fixture:
         database = Path(fixture) / "demo.db"
         config = Path(fixture) / "mcp.json"
-        config.write_text(
-            json.dumps(
-                {
-                    "mcpServers": {
-                        "business-data": {
-                            "command": shutil.which("dotnet"),
-                            "args": [str(assembly), "--transport", "stdio"],
-                            "env": {"MCP_DATABASE": str(database), "MCP_ALLOW_WRITES": "false"},
-                        }
-                    }
-                }
-            )
-        )
+        budget_file = Path(fixture) / "dispatch-budget.db"
+        owner_group = Path(fixture) / "owner-group"
+        budget = RunBudget(budget_file)
+        config.write_text(json.dumps(capture_mcp_config(assembly, database, budget_file, owner_group)))
         env = dict(os.environ)
         for key in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDECODE"):
             env.pop(key, None)
         command = capture_command(prompt, config)
         started = time.monotonic()
+        reader_thread = None
         process = subprocess.Popen(
-            command, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+            command,
+            cwd=ROOT,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            start_new_session=True,
         )
-        lines = queue.Queue()
-
-        def read():
-            for line in process.stdout:
-                lines.put(line)
-            lines.put(None)
-
-        threading.Thread(target=read, daemon=True).start()
-        events, tool_ids = [], set()
-        model, answer, usage = None, None, None
-        turns = 0
         try:
+            publish_owned_group(owner_group, process.pid)
+            lines = queue.Queue()
+
+            def read():
+                for line in process.stdout:
+                    lines.put(line)
+                lines.put(None)
+
+            reader_thread = threading.Thread(target=read, daemon=True)
+            reader_thread.start()
+            events, tool_ids = [], set()
+            model, answer, usage = None, None, None
+            turns = 0
             while True:
                 remaining = 120 - (time.monotonic() - started)
                 if remaining <= 0:
                     raise RuntimeError("capture_timeout")
-                line = lines.get(timeout=remaining)
+                if budget.state()[1] is not None:
+                    raise RuntimeError("capture_dispatch_guard_failed")
+                try:
+                    line = lines.get(timeout=min(0.1, remaining))
+                except queue.Empty:
+                    continue
                 if line is None:
                     break
                 message = json.loads(line)
@@ -172,6 +202,8 @@ def main():
                             and isinstance(v, (int, float))
                         }
             assert process.wait(timeout=5) == 0 and answer and len(tool_ids) >= 2, "incomplete_capture"
+            used, guard_failure = budget.state()
+            assert guard_failure is None and used == len(tool_ids) <= 8, "capture_dispatch_evidence_mismatch"
             check_answer(json.loads(answer))  # Preserve answer unchanged; no markdown removal/rewording.
             with sqlite3.connect(database) as db:
                 audit = [
@@ -210,6 +242,7 @@ def main():
                 "metrics": {
                     "assistantTurns": turns,
                     "toolCalls": len(tool_ids),
+                    "dispatches": used,
                     "elapsedSeconds": time.monotonic() - started,
                     "usage": usage,
                     "usageReason": None if usage else "Client did not expose usage",
@@ -220,10 +253,19 @@ def main():
             check_capture(capture)
             (ROOT / "docs/demo-transcript.json").write_text(json.dumps(capture, indent=2) + "\n")
             print("Captured genuine Claude answer, read calls and safe server audit; no write was performed.")
+        except Exception:
+            # Safe local failure evidence only; never serialize arbitrary errors/transcript.
+            failure_code = budget.state()[1] or "capture_failed"
+            failure_path = ROOT / "artifacts/demo-capture-failure.json"
+            failure_path.parent.mkdir(exist_ok=True)
+            failure_path.write_text(json.dumps({"code": failure_code, "successfulCapture": False}) + "\n")
+            raise SystemExit(
+                "Capture failed; owned process group stopped. No successful recording saved."
+            ) from None
         finally:
-            if process.poll() is None:
-                process.kill()
-                process.wait(timeout=5)
+            stop_owned_group(process)
+            if reader_thread is not None:
+                reader_thread.join(timeout=1)
             process.stdout.close()
 
 

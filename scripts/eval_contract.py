@@ -46,6 +46,7 @@ def check_capture(trace):
     metrics = trace["metrics"]
     assert 1 <= metrics["assistantTurns"] <= 6, "turn_budget"
     assert 2 <= metrics["toolCalls"] <= 8, "tool_budget"
+    assert metrics["dispatches"] == metrics["toolCalls"], "pre_dispatch_budget_evidence"
     assert 0 <= metrics["elapsedSeconds"] <= 120, "capture_deadline"
     calls = [event for event in trace["events"] if event["type"] == "tool_call"]
     assert len(calls) == metrics["toolCalls"], "tool_count"

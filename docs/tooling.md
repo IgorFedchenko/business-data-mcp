@@ -33,6 +33,9 @@ authorized; CI never creates it. `evaluate.py --scripted-only` is an explicitly
 incomplete development mode that runs only scripted scenarios. It cannot satisfy
 full acceptance or demo readiness. The no-inference `check-demo-contracts.py` executes
 a local argv stub and proves missing config/recording fail without invoking Claude.
+`check-capture-guard.py` drives the actual capture adapter/guard with scripted Python
+child processes, concurrent attempts, independent counts and group cleanup checks;
+these are protocol/control fixtures, never Claude evidence.
 
 Hosted private Actions remains disabled until free minutes and $0 stop are confirmed.
 A skipped job is not green. CodeQL is public-only; premium private code/secret scanning
