@@ -38,5 +38,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/gitleaks-bin"
           tar -xzf /tmp/gitleaks.tar.gz -C "$RUNNER_TEMP/gitleaks-bin" gitleaks
           echo "$RUNNER_TEMP/gitleaks-bin" >> "$GITHUB_PATH"
+      - name: Cold documented command from a clean tracked copy
+        run: python3 scripts/cold-start.py
       - name: Format, build, tests, real-process acceptance, evals, template and Docker
         run: ./scripts/verify.sh

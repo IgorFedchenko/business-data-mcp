@@ -77,8 +77,12 @@ class Server:
             for line in self.process.stderr:
                 self.stderr.append(line)
 
-        threading.Thread(target=read_stdout, daemon=True).start()
-        threading.Thread(target=read_stderr, daemon=True).start()
+        self.readers = [
+            threading.Thread(target=read_stdout, daemon=True),
+            threading.Thread(target=read_stderr, daemon=True),
+        ]
+        for reader in self.readers:
+            reader.start()
         if http:
             deadline = time.monotonic() + 20
             while True:
@@ -95,7 +99,7 @@ class Server:
             self.initialize()
 
     def initialize(self, key=None):
-        self.send(
+        negotiated = self.send(
             "initialize",
             {
                 "protocolVersion": PROTOCOL,
@@ -104,6 +108,8 @@ class Server:
             },
             key=key,
         )
+        assert negotiated["protocolVersion"] == PROTOCOL, "unexpected negotiated protocol version"
+        self.negotiated_protocol = negotiated["protocolVersion"]
         self.send("notifications/initialized", {}, notification=True, key=key)
 
     def raw_http(self, body, key=None, headers=None):
@@ -155,7 +161,7 @@ class Server:
     def call(self, name, args, key=None):
         return self.send("tools/call", {"name": name, "arguments": args}, key=key)
 
-    def approve(self, intent_id):
+    def approve(self, intent_id, confirmation=None, expected_exit=0):
         """Exercise the actual interactive operator adapter with a PTY, never MCP."""
         import pty
 
@@ -177,8 +183,9 @@ class Server:
                 if ready:
                     output += os.read(master, 8192)
             assert intent_id.encode() in output and b"no payment" in output
-            os.write(master, intent_id.encode() + b"\n")
-            assert operator.wait(timeout=10) == 0, "operator rejected fixture approval"
+            answer = intent_id if confirmation is None else confirmation
+            os.write(master, answer.encode() + b"\n")
+            assert operator.wait(timeout=10) == expected_exit, "unexpected operator approval outcome"
         finally:
             os.close(master)
             if operator.poll() is None:
@@ -196,6 +203,9 @@ class Server:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=5)
+        for reader in self.readers:
+            reader.join(timeout=2)
+            assert not reader.is_alive(), "owned process reader did not stop"
         for stream in (self.process.stdin, self.process.stdout, self.process.stderr):
             if stream and not stream.closed:
                 stream.close()

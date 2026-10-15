@@ -6,6 +6,7 @@ source scripts/environment.sh
 python3 scripts/check-repository.py
 python3 scripts/check-demo-contracts.py
 python3 scripts/check-capture-guard.py
+python3 scripts/check-eval-negatives.py
 python3 -m ruff check scripts
 python3 -m ruff format --check scripts
 ./scripts/secret-scan.sh

@@ -14,14 +14,15 @@ public sealed class PipeSession : IAsyncDisposable
     private IHost host = null!;
     public McpClient Client { get; private set; } = null!;
 
-    public static async Task<PipeSession> Start(bool writes = false, int limit = 30, Func<BusinessStore, IAuditSink>? auditFactory = null)
+    public static async Task<PipeSession> Start(bool writes = false, int limit = 30, Func<BusinessStore, IAuditSink>? auditFactory = null, Action<IMcpServerBuilder>? configure = null)
     {
         var session = new PipeSession();
         var input = new Pipe();
         var output = new Pipe();
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
-        builder.Services.AddBusinessMcp(session.Database.Store, new("test:local", true, writes), limit)
+        var mcp = builder.Services.AddBusinessMcp(session.Database.Store, new("test:local", true, writes), limit)
             .WithStreamServerTransport(input.Reader.AsStream(), output.Writer.AsStream());
+        configure?.Invoke(mcp);
         if (auditFactory != null) builder.Services.AddSingleton(auditFactory(session.Database.Store));
         session.host = builder.Build();
         await session.host.StartAsync();
