@@ -59,7 +59,10 @@ public static class ServerApplication
                 http.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous",
                 _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = requestLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true
+                    PermitLimit = requestLimit,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
                 }));
             options.OnRejected = (context, _) =>
             {

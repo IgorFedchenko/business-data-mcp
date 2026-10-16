@@ -25,9 +25,12 @@ public sealed class HttpSession : IAsyncDisposable
             builder.WebHost.UseTestServer();
             builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["MCP_DATABASE"] = session.Database.Path, ["MCP_READ_API_KEY"] = ReaderKey,
-                ["MCP_WRITE_API_KEY"] = WriterKey, ["MCP_ALLOW_WRITES"] = writes ? "true" : "false",
-                ["MCP_HTTP_LIMIT"] = requestLimit.ToString(), ["MCP_TOOL_LIMIT"] = "30"
+                ["MCP_DATABASE"] = session.Database.Path,
+                ["MCP_READ_API_KEY"] = ReaderKey,
+                ["MCP_WRITE_API_KEY"] = WriterKey,
+                ["MCP_ALLOW_WRITES"] = writes ? "true" : "false",
+                ["MCP_HTTP_LIMIT"] = requestLimit.ToString(),
+                ["MCP_TOOL_LIMIT"] = "30"
             });
         });
         await session.App.StartAsync();
@@ -84,12 +87,12 @@ public sealed class HttpMcpTests
         Assert.NotEqual(true, status.IsError);
         Assert.Contains("shipped", PipeSession.Text(status));
         var blocked = await reader.CallToolAsync("prepare_return", new Dictionary<string, object?>
-            { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
+        { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
         Assert.Contains("forbidden", PipeSession.Text(blocked));
         await using var writer = await session.Connect(HttpSession.WriterKey);
         Assert.Equal(6, (await writer.ListToolsAsync()).Count);
         var prepared = await writer.CallToolAsync("prepare_return", new Dictionary<string, object?>
-            { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
+        { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
         Assert.NotEqual(true, prepared.IsError);
         Assert.Contains("api:writer", PipeSession.Text(prepared));
         Assert.Contains(session.Database.Store.ReadAudit(), a => a.Actor == "api:reader" && a.Outcome == "success");

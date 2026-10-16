@@ -1,6 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using BusinessData.Core;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BusinessData.Tests;
 
@@ -23,7 +23,7 @@ public sealed class AuditBoundaryTests
     {
         await using var session = await PipeSession.Start(writes: true, auditFactory: store => new FaultingAudit(store, true));
         var response = await session.Call("prepare_return", new()
-            { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "audit-start-key" });
+        { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "audit-start-key" });
         var error = JsonDocument.Parse(PipeSession.Text(response)).RootElement;
         Assert.True(response.IsError);
         Assert.Equal("audit_unavailable", error.GetProperty("code").GetString());

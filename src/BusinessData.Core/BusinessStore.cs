@@ -18,7 +18,9 @@ public sealed class BusinessStore : IAuditSink
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         connectionString = new SqliteConnectionStringBuilder
         {
-            DataSource = fullPath, ForeignKeys = true, DefaultTimeout = 5
+            DataSource = fullPath,
+            ForeignKeys = true,
+            DefaultTimeout = 5
         }.ToString();
         this.clock = clock ?? TimeProvider.System;
     }

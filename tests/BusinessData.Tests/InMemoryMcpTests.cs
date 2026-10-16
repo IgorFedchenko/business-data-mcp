@@ -1,6 +1,6 @@
 using System.IO.Pipelines;
-using BusinessData.Server;
 using BusinessData.Core;
+using BusinessData.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Client;
@@ -63,7 +63,7 @@ public sealed class InMemoryMcpTests
         Assert.NotEqual(true, result.IsError);
         Assert.Contains("Avery Morgan", PipeSession.Text(result));
         var denied = await session.Call("prepare_return", new()
-            { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
+        { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
         Assert.True(denied.IsError);
         Assert.Contains("forbidden", PipeSession.Text(denied));
         Assert.Empty(session.Database.Store.GetCustomerHistory("CUST-001").Returns);
@@ -83,7 +83,7 @@ public sealed class InMemoryMcpTests
         var prepareSchema = tools.Single(t => t.Name == "prepare_return").ProtocolTool.InputSchema.GetProperty("properties");
         Assert.Equal(new[] { "idempotencyKey", "orderId", "reason" }, prepareSchema.EnumerateObject().Select(p => p.Name).Order().ToArray());
         var prepared = await session.Call("prepare_return", new()
-            { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
+        { ["orderId"] = "ORD-1001", ["reason"] = "damaged", ["idempotencyKey"] = "prepare-0001" });
         Assert.NotEqual(true, prepared.IsError);
         var id = System.Text.RegularExpressions.Regex.Match(PipeSession.Text(prepared), "RI-[a-f0-9]{32}").Value;
         Assert.NotEmpty(id);

@@ -30,9 +30,12 @@ public static class Telemetry
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStopped = activity => Console.Error.WriteLine(JsonSerializer.Serialize(new
             {
-                type = "span", traceId = activity.TraceId.ToString(),
-                correlationId = activity.GetTagItem("correlation.id"), tool = activity.GetTagItem("tool.name"),
-                code = activity.GetTagItem("outcome.code"), durationMs = activity.Duration.TotalMilliseconds
+                type = "span",
+                traceId = activity.TraceId.ToString(),
+                correlationId = activity.GetTagItem("correlation.id"),
+                tool = activity.GetTagItem("tool.name"),
+                code = activity.GetTagItem("outcome.code"),
+                durationMs = activity.Duration.TotalMilliseconds
             }))
         });
     }
