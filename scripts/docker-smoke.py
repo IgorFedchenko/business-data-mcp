@@ -13,12 +13,15 @@ import time
 import urllib.error
 import urllib.request
 from mcp_harness import PROTOCOL, payload
-from eval_contract import check_order
+from eval_contract import ROOT, check_order
 
 
 def main():
     subprocess.run(["docker", "build", "-t", "business-data-mcp:smoke", "."], check=True)
-    with tempfile.TemporaryDirectory() as directory:
+    fixture_root = ROOT / "artifacts"
+    fixture_root.mkdir(exist_ok=True)
+    # Colima shares the home directory, not macOS /private/var/folders by default.
+    with tempfile.TemporaryDirectory(prefix="docker-smoke-", dir=fixture_root) as directory:
         key = secrets.token_hex(32)
         env = Path(directory) / "container.env"
         env.write_text("MCP_READ_API_KEY=" + key + "\n")
@@ -63,7 +66,6 @@ def main():
                 "docker",
                 "run",
                 "--detach",
-                "--rm",
                 "--env-file",
                 str(env),
                 "-p",
@@ -86,6 +88,10 @@ def main():
                         assert json.load(response)["status"] == "ok"
                     break
                 except OSError:
+                    state = json.loads(subprocess.check_output(["docker", "inspect", container], text=True))[
+                        0
+                    ]["State"]
+                    assert state["Running"], "owned container exited before readiness"
                     if attempt == 99:
                         raise
                     time.sleep(0.1)
@@ -187,8 +193,45 @@ def main():
             assert key not in subprocess.check_output(
                 ["docker", "logs", container], stderr=subprocess.STDOUT, text=True
             )
+        except BaseException:
+            # Retain useful safe startup evidence before removing only our own container.
+            inspected = subprocess.run(["docker", "inspect", container], capture_output=True, text=True)
+            if inspected.returncode == 0:
+                state = json.loads(inspected.stdout)[0]["State"]
+                logs = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
+                codes = []
+                for line in (logs.stdout + logs.stderr).splitlines():
+                    try:
+                        record = json.loads(line)
+                    except ValueError:
+                        continue
+                    if record.get("code") in {"configuration_error", "startup_error"}:
+                        codes.append(record["code"])
+                print(
+                    json.dumps(
+                        {
+                            "dockerFailureState": state["Status"],
+                            "exitCode": state["ExitCode"],
+                            "oomKilled": state["OOMKilled"],
+                            "safeStartupCodes": codes,
+                        }
+                    ),
+                    flush=True,
+                )
+            raise
         finally:
-            subprocess.run(["docker", "stop", container], check=True, stdout=subprocess.DEVNULL)
+            cleanup = subprocess.run(
+                ["docker", "rm", "--force", "--volumes", container],
+                capture_output=True,
+                text=True,
+            )
+            if cleanup.returncode != 0:
+                # Do not replace the primary failure with a secondary docker-stop exception.
+                import sys
+
+                if sys.exc_info()[0] is None:
+                    raise RuntimeError("owned_container_cleanup_failed")
+                print("owned_container_cleanup_failed", flush=True)
     print("PASS: Docker build, non-root runtime, health, auth and real MCP read")
 
 
