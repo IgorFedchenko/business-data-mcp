@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   verify:
-    # Public standard runners are free. Private runs require the owner's free-tier confirmation.
-    if: ${{ !github.event.repository.private || vars.PRIVATE_CI_FREE_TIER_CONFIRMED == 'true' }}
+    # Dormant while private: owner forbids every private Actions execution.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

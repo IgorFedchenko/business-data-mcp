@@ -1,10 +1,10 @@
 # Business Data MCP
 
 > Reference implementation under verification. Runtime/build/template/Docker results
-> and the genuine Claude GIF are pending; private CI remains cost-gated. No release
+> are pending. Actions is disabled while private; a genuine Claude GIF is optional. No release
 > readiness or executed-green-CI claim is made.
 
-[MIT](LICENSE) · [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0) · [CI runs](https://github.com/IgorFedchenko/business-data-mcp/actions)
+[MIT](LICENSE) · [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 Give an AI assistant useful access to business data without handing it a SQL console
 or unrestricted write permissions.
@@ -87,7 +87,7 @@ source scripts/environment.sh
 
 This small no-LLM smoke starts real stdio, reads ORD-1001 and rejects a direct write.
 It needs no Docker, OpenSSL or Unix PTY. Full `./scripts/verify.sh` additionally runs
-Kestrel/PTY/restart, template, Docker and mandatory genuine captured-answer replay.
+Kestrel/PTY/restart, hard-crash recovery, template, Docker and scripted MCP contract evaluation.
 
 ## Connect Claude
 
@@ -185,11 +185,11 @@ logging boundaries, trust assumptions and production hardening.
 
 ## Verify
 
-Full acceptance requires all tools/platform prerequisites above and an authorized genuine
-Claude capture checked into `docs/demo-transcript.json`. Missing recorded evidence fails
-the strict gate; CI never runs inference to create it. Before capture, an explicitly
-incomplete development check is `python3 scripts/evaluate.py --scripted-only` after build
-(on Studio run it through the heavy wrapper). It cannot satisfy full acceptance.
+Full local verification uses deterministic scripted MCP contract scenarios and a frozen
+synthetic oracle. It makes no inference calls and measures no model quality, tokens or
+cost. A genuine Claude recording/GIF is optional. If supplied, validate it separately
+with `python3 scripts/evaluate.py --require-capture`; that strict mode rejects missing
+or invalid recorded evidence.
 
 ```bash
 ./scripts/verify.sh
@@ -203,9 +203,9 @@ PTY operator path, restart and direct SQLite assertions. It also runs strict scr
 evals against a manually frozen oracle, lint/format, secret scans, template and Docker. All fixtures use temporary SQLite
 databases. No real secrets, paid services or model calls are required.
 
-GitHub Actions uses the same locked dependencies and verification commands. Private
-CI must stay within the owner's included minutes and a zero-spend budget. No cache
-or build artifact uploads are necessary. See the Actions tab for commit-specific results.
+GitHub Actions is disabled while this repository is private. The checked-in workflow
+is public-only configuration for a possible future owner-approved publication; it is
+not evidence of executed hosted CI. Local results must be verified independently.
 
 ## Observability and Docker
 
@@ -253,7 +253,7 @@ src/BusinessData.Server/   SDK tools, transports, auth, limits, operator CLI
 tests/BusinessData.Tests/    Business, in-memory MCP and HTTP integration tests
 examples/                   Claude Desktop and Claude Code configurations
 scripts/                    Build, run, verify, template smoke and demo capture
-docs/                       Demo, security decisions and portfolio copy
+docs/                       Architecture, testing, demo and security decisions
 .template.config/           dotnet new template definition
 .github/workflows/          GitHub Actions verification
 ```
@@ -272,4 +272,4 @@ Built against the [official C# SDK](https://github.com/modelcontextprotocol/csha
 2.2.0; API patterns checked at upstream commit
 `84735d35a75e817d0830eaf8cacaded959d2d104`. Dependency lockfiles are committed.
 
-[MIT License](LICENSE) · [Portfolio copy](docs/upwork-portfolio.md)
+[MIT License](LICENSE) · [Architecture](docs/architecture.md) · [Testing](docs/testing.md)

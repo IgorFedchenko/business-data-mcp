@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import secrets
 import ssl
+import sqlite3
 import subprocess
 import tempfile
 import time
@@ -77,6 +78,7 @@ def main():
             user = subprocess.check_output(["docker", "exec", container, "id", "-u"], text=True).strip()
             assert user != "0", "container must not run as root"
             binding = subprocess.check_output(["docker", "port", container, "8080/tcp"], text=True).strip()
+            assert binding.startswith("127.0.0.1:"), "fixture port must bind loopback only"
             url = "https://" + binding
             for attempt in range(100):
                 try:
@@ -144,6 +146,23 @@ def main():
             ]
             assert any(mount["Destination"] == "/data" and mount["Type"] == "volume" for mount in mounts)
             subprocess.run(["docker", "exec", container, "test", "-s", "/data/business.db"], check=True)
+
+            def audit_snapshot(name):
+                snapshot = Path(directory) / name
+                snapshot.mkdir()
+                subprocess.run(
+                    ["docker", "cp", container + ":/data/.", str(snapshot)],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                )
+                with sqlite3.connect(snapshot / "business.db") as connection:
+                    assert connection.execute(
+                        "SELECT total_cents,status FROM orders WHERE id='ORD-1001'"
+                    ).fetchone() == (12990, "delivered")
+                    return {row[0] for row in connection.execute("SELECT id FROM audit")}
+
+            before_restart = audit_snapshot("before-restart")
+            assert before_restart, "authenticated read must have durable audit state"
             subprocess.run(["docker", "restart", container], check=True, stdout=subprocess.DEVNULL)
             for attempt in range(100):
                 try:
@@ -154,6 +173,14 @@ def main():
                     if attempt == 99:
                         raise
                     time.sleep(0.1)
+            after_restart = audit_snapshot("after-restart")
+            assert before_restart < after_restart, (
+                "restart must preserve prior audit rows and append new calls"
+            )
+            image_config = subprocess.check_output(
+                ["docker", "image", "inspect", "business-data-mcp:smoke"], text=True
+            )
+            assert key not in image_config, "runtime credential must not enter image configuration"
             assert key not in subprocess.check_output(
                 ["docker", "history", "--no-trunc", "business-data-mcp:smoke"], text=True
             )

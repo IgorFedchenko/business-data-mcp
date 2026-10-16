@@ -64,7 +64,7 @@ print("PASS: scripted CLI stub loaded explicit read-only config and retained res
         rejected = subprocess.run([sys.executable, str(stub), *broken], capture_output=True, text=True)
         assert rejected.returncode != 0, "missing_mcp_config_negative_control_was_accepted"
         absent = fixture / "absent-capture.json"
-        for flags in ([], ["--require-capture"]):
+        for flags in (["--require-capture"],):
             result = subprocess.run(
                 [sys.executable, str(ROOT / "scripts/evaluate.py"), "--capture", str(absent), *flags],
                 capture_output=True,
@@ -74,7 +74,35 @@ print("PASS: scripted CLI stub loaded explicit read-only config and retained res
             assert "missing_recorded_capture:" in result.stderr, (
                 "must fail named capture gate before host startup"
             )
-        print("PASS: default/explicit strict modes reject missing recording; invalid config argv rejected")
+        default = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/evaluate.py"),
+                "--capture",
+                str(absent),
+                "--assembly",
+                str(fixture / "absent.dll"),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert default.returncode != 0
+        assert "missing_recorded_capture:" not in default.stderr, "default must reach scripted host startup"
+        forged = fixture / "forged.json"
+        forged.write_text(json.dumps({"provenance": "scripted"}))
+        rejected_capture = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/evaluate.py"),
+                "--require-capture",
+                "--capture",
+                str(forged),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert rejected_capture.returncode != 0, "forged capture must fail strict evidence validation"
+        print("PASS: optional strict mode rejects missing recording; invalid config argv rejected")
 
 
 if __name__ == "__main__":

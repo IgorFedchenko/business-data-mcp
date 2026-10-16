@@ -10,7 +10,8 @@ export DOTNET_CLI_HOME="$fixture/cli-home"
 dotnet new install "$repository" --debug:custom-hive "$fixture/hive"
 dotnet new business-mcp -n ContosoMcp -o "$fixture/generated" --debug:custom-hive "$fixture/hive"
 cd "$fixture/generated"
-[[ ! -e CLAUDE.md && ! -e docs/implementation-plan.md && ! -e docs/verification.md ]]
+[[ -f CLAUDE.md && -f AGENTS.md && ! -e docs/implementation-plan.md && ! -e docs/verification.md ]]
+python3 -c 'from pathlib import Path; assert "CLAUDE.md" in Path("AGENTS.md").read_text()'
 python3 scripts/check-repository.py
 dotnet restore ContosoMcp.sln --locked-mode --disable-parallel
 dotnet build src/ContosoMcp.Server/ContosoMcp.Server.csproj -c Release --no-restore --nologo -m:2

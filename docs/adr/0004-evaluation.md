@@ -16,3 +16,7 @@ Read-only assistant recording and deterministic write/operator demonstration hav
 separate attribution. Scripted adversarial strings establish protocol/policy behavior,
 not universal prompt-injection resistance. ActivitySource/Meter provide local telemetry;
 Langfuse/Phoenix and hosted exporters are unnecessary for this deterministic service.
+
+Local acceptance defaults to deterministic scripted MCP contract evaluation with a frozen
+oracle. Genuine Claude capture/GIF is optional. Explicit `--require-capture` remains strict
+and rejects missing or forged evidence; scripted results make no model-quality claim.

@@ -41,7 +41,9 @@
         ".gitleaks.toml",
         "Dockerfile",
         ".dockerignore",
-        ".github/**"
+        ".github/**",
+        "CLAUDE.md",
+        "AGENTS.md"
       ],
       "exclude": [
         "**/bin/**",

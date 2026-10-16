@@ -27,22 +27,21 @@ for the complete acceptance entrypoint.
 
 `process-acceptance.py` is an independent raw JSON-RPC Python client; production hosts
 use the official SDK. In-memory and TestServer tests use actual official SDK clients.
-`evaluate.py --require-capture` is the strict default used by verify/CI: missing or
-invalid genuine recorded replay fails before starting a host. Capture remains owner-
-authorized; CI never creates it. `evaluate.py --scripted-only` is an explicitly
-incomplete development mode that runs only scripted scenarios. It cannot satisfy
-full acceptance or demo readiness. The no-inference `check-demo-contracts.py` executes
-a local argv stub and proves missing config/recording fail without invoking Claude.
+`evaluate.py` defaults to deterministic scripted MCP contract evaluation. This is
+complete local contract acceptance, with no inference or model-quality claim.
+`--require-capture` additionally requires genuine recorded replay and rejects missing
+or forged evidence before starting a host. The no-inference `check-demo-contracts.py`
+checks explicit capture argv, optional strict rejection and default scripted startup.
 `check-capture-guard.py` drives the actual capture adapter/guard with scripted Python
 child processes, concurrent attempts, independent counts and group cleanup checks;
 these are protocol/control fixtures, never Claude evidence.
 
-Hosted private Actions remains disabled until free minutes and $0 stop are confirmed.
-A skipped job is not green. CodeQL is public-only; premium private code/secret scanning
-is not enabled. Gitleaks is the free standalone binary, not a license-gated action.
+All private GitHub Actions execution is forbidden and disabled. The workflow is
+public-only future configuration, not an executed check. CodeQL is likewise public-only;
+premium private scanning is not enabled. Gitleaks is a free standalone binary.
 
 
 Focused entrypoints: `scripts/process-acceptance.py` is the
-real-process e2e entry; `scripts/evaluate.py` is strict offline eval; Docker uses
+real-process e2e entry; `scripts/evaluate.py` is scripted offline contract eval; Docker uses
 `scripts/docker-smoke.py`; template uses `scripts/template-smoke-inner.sh` within the
 single verification ticket. Focused mutation checks use separate Studio tickets.

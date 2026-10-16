@@ -32,7 +32,7 @@ def error_code(result):
 
 
 class Server:
-    def __init__(self, assembly, database, writes=False, http=False, keys=None):
+    def __init__(self, assembly, database, writes=False, http=False, keys=None, command=None):
         self.assembly = str(Path(assembly).resolve())
         self.env = {
             **os.environ,
@@ -47,7 +47,7 @@ class Server:
         self.http = http
         self.sequence = 0
         self.stderr = []
-        args = ["dotnet", self.assembly, "--transport", "http" if http else "stdio"]
+        args = command or ["dotnet", self.assembly, "--transport", "http" if http else "stdio"]
         if http:
             with socket.socket() as listener:
                 listener.bind(("127.0.0.1", 0))

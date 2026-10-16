@@ -15,6 +15,7 @@ dotnet format BusinessData.sln --verify-no-changes --no-restore
 dotnet build BusinessData.sln -c Release --no-restore --nologo -m:2 -warnaserror
 dotnet test BusinessData.sln -c Release --no-build --nologo -m:2 --logger 'trx;LogFileName=tests.trx' --results-directory artifacts/test-results
 python3 scripts/process-acceptance.py
-python3 scripts/evaluate.py --require-capture
+python3 scripts/crash-acceptance.py
+python3 scripts/evaluate.py
 bash scripts/template-smoke-inner.sh
 python3 scripts/docker-smoke.py

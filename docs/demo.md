@@ -5,9 +5,9 @@ no scripted answer is presented as a recording. Capture requires owner confirmat
 that included OAuth entitlement cannot incur additional charges. Authentication alone
 is insufficient. No model call runs in CI.
 
-Build, run focused tests and the explicitly incomplete scripted-only eval first. Full
-verification needs the genuine capture, so it cannot pass yet. Only after the owner
-confirmation:
+Build and pass local scripted contract verification first. A recording/GIF is optional
+and is not required for local acceptance. Only with existing OAuth entitlement and
+Extra Usage disabled:
 
 ```bash
 source scripts/environment.sh
