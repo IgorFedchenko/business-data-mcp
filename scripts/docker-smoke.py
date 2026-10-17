@@ -79,6 +79,7 @@ def main():
         try:
             user = subprocess.check_output(["docker", "exec", container, "id", "-u"], text=True).strip()
             assert user != "0", "container must not run as root"
+
             def container_url():
                 binding = subprocess.check_output(
                     ["docker", "port", container, "8080/tcp"], text=True
@@ -178,7 +179,17 @@ def main():
             # Docker may allocate a new ephemeral published port when restarting.
             previous_url = url
             url = container_url()
-            print(json.dumps({"restartPublishedPortChanged": url != previous_url}), flush=True)
+            print(
+                json.dumps(
+                    {
+                        "phase": "after_restart",
+                        "previousUrl": previous_url,
+                        "currentUrl": url,
+                        "restartPublishedPortChanged": url != previous_url,
+                    }
+                ),
+                flush=True,
+            )
             for attempt in range(100):
                 try:
                     with request(key) as response:
