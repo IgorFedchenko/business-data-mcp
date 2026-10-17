@@ -79,9 +79,14 @@ def main():
         try:
             user = subprocess.check_output(["docker", "exec", container, "id", "-u"], text=True).strip()
             assert user != "0", "container must not run as root"
-            binding = subprocess.check_output(["docker", "port", container, "8080/tcp"], text=True).strip()
-            assert binding.startswith("127.0.0.1:"), "fixture port must bind loopback only"
-            url = "https://" + binding
+            def container_url():
+                binding = subprocess.check_output(
+                    ["docker", "port", container, "8080/tcp"], text=True
+                ).strip()
+                assert binding.startswith("127.0.0.1:"), "fixture port must bind loopback only"
+                return "https://" + binding
+
+            url = container_url()
             for attempt in range(100):
                 try:
                     with urllib.request.urlopen(url + "/health", timeout=1, context=context) as response:
@@ -170,6 +175,10 @@ def main():
             before_restart = audit_snapshot("before-restart")
             assert before_restart, "authenticated read must have durable audit state"
             subprocess.run(["docker", "restart", container], check=True, stdout=subprocess.DEVNULL)
+            # Docker may allocate a new ephemeral published port when restarting.
+            previous_url = url
+            url = container_url()
+            print(json.dumps({"restartPublishedPortChanged": url != previous_url}), flush=True)
             for attempt in range(100):
                 try:
                     with request(key) as response:
