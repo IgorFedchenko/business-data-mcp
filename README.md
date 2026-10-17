@@ -3,8 +3,8 @@
 > Local checks: 57 tests passed; real stdio/HTTP/PTY, four crash-recovery cases,
 > 16 scripted MCP assertions, renamed-template, Docker and clean-copy cold-start checks
 > passed. Independent controlled mutations confirmed direct-write permission and factual
-> answer checks detect regressions. Actions is disabled
-> while private; no hosted CI or model-quality result is claimed.
+> answer checks detect regressions. Actions remains disabled
+> after publication; no hosted CI or model-quality result is claimed.
 
 [MIT](LICENSE) · [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)
 
@@ -17,6 +17,10 @@ support questions from an existing database, then open a return ticket only with
 separate write permission and an explicit human approval.
 
 **C# / .NET 8 · official ModelContextProtocol SDK 2.2.0 · SQLite · stdio + Streamable HTTP · MIT**
+
+![Architecture illustration: scoped MCP access and a separate human approval for returns](docs/images/portfolio-cover.png)
+
+[Editable architecture cover](docs/images/portfolio-cover.svg) · [Architecture](docs/architecture.md) · [Testing](docs/testing.md)
 
 ## See it work
 
@@ -53,7 +57,16 @@ flowchart LR
 The same tool registration and security filters run in both transports and in the
 in-memory integration tests. Business invariants live outside MCP, in `BusinessData.Core`.
 
-## Run in one command
+## Integration status
+
+| Status | Components |
+| --- | --- |
+| Runs locally | Official MCP SDK, stdio/Streamable HTTP, SQLite, scoped API keys, audit and operator CLI. |
+| Synthetic | Orders, customers, return tickets and scripted evaluation answers. |
+| Client configuration provided | Claude Desktop and Claude Code examples; a genuine Claude conversation/GIF has not been recorded. |
+| Outside this demo | Live business systems, LLM inference, payments and a hosted deployment. |
+
+## Run locally
 
 Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (8.0.426 or
 later 8.0.4xx patch) and Git to launch the server or run focused .NET tests.
@@ -185,7 +198,7 @@ Inspect redacted local audit records:
 Read [the security and failure model](docs/security.md) for crash consistency,
 logging boundaries, trust assumptions and production hardening.
 
-## Verify
+## Verification
 
 Full local verification uses deterministic scripted MCP contract scenarios and a frozen
 synthetic oracle. It makes no inference calls and measures no model quality, tokens or
@@ -205,9 +218,11 @@ PTY operator path, restart and direct SQLite assertions. It also runs strict scr
 evals against a manually frozen oracle, lint/format, secret scans, template and Docker. All fixtures use temporary SQLite
 databases. No real secrets, paid services or model calls are required.
 
-GitHub Actions is disabled while this repository is private. The checked-in workflow
+GitHub Actions remains disabled after publication. The checked-in workflow
 is public-only configuration for a possible future owner-approved publication; it is
 not evidence of executed hosted CI. Local results must be verified independently.
+Automatic Dependabot version updates are disabled; the [configuration example](docs/examples/dependabot.yml)
+is inactive and requires a separate owner decision before activation.
 
 ## Observability and Docker
 
@@ -260,7 +275,7 @@ docs/                       Architecture, testing, demo and security decisions
 .github/workflows/          GitHub Actions verification
 ```
 
-## Limits
+## Limitations
 
 SQLite and one trusted tenant, two API-key principals, process-local quotas, one return
 per delivered order and a local operator are intentional scope choices. There is no

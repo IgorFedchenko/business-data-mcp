@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="750" viewBox="0 0 1000 750" role="img" aria-labelledby="title desc">
+<title id="title">Business Data MCP: scoped reads and human-approved returns</title>
+<desc id="desc">A technical architecture diagram of a local synthetic .NET 8 MCP server. Four read tools share an authorization and audit boundary. Two write tools require a separate human operator approval between intent creation and ticket submission.</desc>
+<rect width="1000" height="750" fill="#f3f7f4"/>
+<text x="56" y="57.84" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#397c65">BUSINESS DATA MCP</text>
+<text x="56" y="111.32" font-family="Arial, sans-serif" font-size="39" font-weight="700" fill="#203e35">Useful data. Explicit permission.</text>
+<text x="56" y="142.96" font-family="Arial, sans-serif" font-size="17" font-weight="400" fill="#597268">Local .NET 8 reference  |  Official MCP SDK  |  Synthetic SQLite data</text>
+<rect x="56" y="175" width="225" height="106" rx="14" fill="#ffffff" stroke="#d0ddd5"/>
+<text x="76" y="206.32" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#397c65">MCP CLIENT</text>
+<text x="76" y="240.72" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#203e35">stdio /</text>
+<text x="76" y="264.72" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#203e35">Streamable HTTP</text>
+<rect x="337" y="175" width="310" height="106" rx="14" fill="#ffffff" stroke="#d0ddd5"/>
+<text x="357" y="206.32" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#397c65">POLICY BOUNDARY</text>
+<text x="357" y="239.84" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#203e35">Identity, scopes and quotas</text>
+<text x="357" y="266.08" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#597268">Redacted audit on direct calls</text>
+<rect x="703" y="175" width="241" height="106" rx="14" fill="#ffffff" stroke="#d0ddd5"/>
+<text x="723" y="206.32" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#397c65">SYNTHETIC SQLITE</text>
+<text x="723" y="238.96" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#203e35">Orders and customers</text>
+<text x="723" y="266.08" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#597268">Intents and return tickets</text>
+<path d="M290 228 L326 228" stroke="#42846c" stroke-width="3" fill="none"/>
+<polygon points="326,228 318,223 318,233" fill="#42846c"/>
+<path d="M657 228 L692 228" stroke="#42846c" stroke-width="3" fill="none"/>
+<polygon points="692,228 684,223 684,233" fill="#42846c"/>
+<rect x="56" y="319" width="408" height="278" rx="14" fill="#ffffff" stroke="#d0ddd5"/>
+<text x="80" y="356.08" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#397c65">4 READ TOOLS</text>
+<rect x="78" y="382" width="364" height="38" rx="7" fill="#f2f7f3" stroke="#e0e9e2"/>
+<text x="92" y="407.72" font-family="Courier New, monospace" font-size="19" font-weight="400" fill="#203e35">search_orders</text>
+<rect x="78" y="429" width="364" height="38" rx="7" fill="#f2f7f3" stroke="#e0e9e2"/>
+<text x="92" y="454.72" font-family="Courier New, monospace" font-size="19" font-weight="400" fill="#203e35">get_order</text>
+<rect x="78" y="476" width="364" height="38" rx="7" fill="#f2f7f3" stroke="#e0e9e2"/>
+<text x="92" y="501.72" font-family="Courier New, monospace" font-size="19" font-weight="400" fill="#203e35">get_order_status</text>
+<rect x="78" y="523" width="364" height="38" rx="7" fill="#f2f7f3" stroke="#e0e9e2"/>
+<text x="92" y="548.72" font-family="Courier New, monospace" font-size="19" font-weight="400" fill="#203e35">get_customer_history</text>
+<rect x="496" y="319" width="448" height="356" rx="14" fill="#ffffff" stroke="#d0ddd5"/>
+<text x="520" y="355.20" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#397c65">2 WRITE TOOLS + SEPARATE APPROVAL</text>
+<rect x="520" y="383" width="400" height="65" rx="9" fill="#f2f7f3" stroke="#dbe7df"/>
+<text x="538" y="411.60" font-family="Courier New, monospace" font-size="20" font-weight="400" fill="#203e35">prepare_return</text>
+<text x="538" y="435.32" font-family="Arial, sans-serif" font-size="14" font-weight="400" fill="#597268">Actor-bound intent; expires in 10 minutes</text>
+<path d="M720 452 L720 471" stroke="#42846c" stroke-width="3" fill="none"/>
+<polygon points="720,471 715,463 725,463" fill="#42846c"/>
+<rect x="520" y="476" width="400" height="70" rx="9" fill="#def0e4" stroke="#8eb7a1"/>
+<text x="538" y="502.08" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#27674f">HUMAN OPERATOR CLI</text>
+<text x="538" y="528.32" font-family="Arial, sans-serif" font-size="14" font-weight="400" fill="#416951">Review the exact intent; approve-return</text>
+<path d="M720 550 L720 569" stroke="#42846c" stroke-width="3" fill="none"/>
+<polygon points="720,569 715,561 725,561" fill="#42846c"/>
+<rect x="520" y="574" width="400" height="65" rx="9" fill="#f2f7f3" stroke="#dbe7df"/>
+<text x="538" y="603.60" font-family="Courier New, monospace" font-size="20" font-weight="400" fill="#203e35">request_return</text>
+<text x="538" y="626.32" font-family="Arial, sans-serif" font-size="14" font-weight="400" fill="#597268">One return ticket; replay uses the same key</text>
+<text x="80" y="633.44" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#397c65">LOCAL REFERENCE</text>
+<text x="80" y="661.96" font-family="Arial, sans-serif" font-size="17" font-weight="400" fill="#597268">Real protocols. No inference required.</text>
+<text x="56" y="723.20" font-family="Arial, sans-serif" font-size="15" font-weight="400" fill="#597268">Scoped access  |  Durable idempotency  |  Return tickets, no payments</text>
+</svg>

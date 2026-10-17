@@ -37,8 +37,9 @@ are required for the full local suite. Missing prerequisites are failures, not p
 ## Change rules
 
 Preserve existing Git history, dates and agent attribution. Keep internal process,
-review logs and portfolio text outside this repository. Keep the repository private;
-all private GitHub Actions are forbidden. New commits/pushes use `[skip ci]`.
+review logs and portfolio text outside this repository. Repository visibility requires owner approval after the overall review.
+GitHub Actions remains disabled after publication; do not enable or dispatch it without
+separate owner authorization. New commits/pushes use `[skip ci]`.
 Public-only workflows are dormant configuration and must not imply hosted green CI.
 No external service/model keys, live business integrations or paid test services.
 Default evaluation is deterministic scripted MCP contract verification, never a model
