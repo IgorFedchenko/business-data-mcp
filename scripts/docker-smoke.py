@@ -144,7 +144,8 @@ def main():
             ).encode()
             with request(key, initialization) as response:
                 assert response.status == 200
-            with request(key) as response:
+
+            def check_read_response(response):
                 raw = response.read().decode()
                 if raw.startswith("event:") or raw.startswith("data:"):
                     result = next(
@@ -153,6 +154,9 @@ def main():
                 else:
                     result = json.loads(raw)
                 check_order(payload(result["result"]))
+
+            with request(key) as response:
+                check_read_response(response)
             mounts = json.loads(subprocess.check_output(["docker", "inspect", container], text=True))[0][
                 "Mounts"
             ]
@@ -194,6 +198,9 @@ def main():
                 try:
                     with request(key) as response:
                         assert response.status == 200
+                        # HTTP headers can arrive before the streamed tool completes.
+                        # Consume and validate the actual result before copying SQLite.
+                        check_read_response(response)
                     break
                 except OSError:
                     if attempt == 99:
@@ -202,6 +209,17 @@ def main():
             after_restart = audit_snapshot("after-restart")
             assert before_restart < after_restart, (
                 "restart must preserve prior audit rows and append new calls"
+            )
+            print(
+                json.dumps(
+                    {
+                        "auditRowsBeforeRestart": len(before_restart),
+                        "auditRowsAfterRestart": len(after_restart),
+                        "priorAuditRowsPreserved": before_restart < after_restart,
+                        "postRestartOrderValidated": True,
+                    }
+                ),
+                flush=True,
             )
             image_config = subprocess.check_output(
                 ["docker", "image", "inspect", "business-data-mcp:smoke"], text=True

@@ -16,6 +16,9 @@ approval, independent SQLite assertions, races, replay and restart. A separate t
 SDK host pauses before execution or after a business commit, then an external client
 SIGKILLs it and verifies recovery through the production host. No production failure
 toggle is used. Template/Docker checks use isolated state and owned-process cleanup.
+The Docker check consumes and validates the complete MCP order response before and after
+restart, then independently checks that every earlier audit row survives and a new row appears.
+Receiving HTTP response headers alone does not establish completion of a streamed tool call.
 
 `python3 scripts/cold-start.py` is an outer clean-copy check: its copied run/build
 scripts own compilation's heavy ticket. Run it separately, without an outer wrapper.
