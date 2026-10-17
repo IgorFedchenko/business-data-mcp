@@ -2,7 +2,11 @@
 
 Run `./scripts/verify.sh` with the [required tooling](tooling.md). On Studio it owns
 one heavy ticket; never nest wrappers. The suite fails on missing tools or checks.
-Current README evidence stays pending until actual local results have been reviewed.
+The local run passed 57 tests with zero failures or skips, real stdio/Kestrel/PTY and
+restart checks, four hard-crash recovery cases, 16 scripted MCP assertions and the
+renamed-template, Docker and clean-copy cold-start checks. A separate
+independent verifier must review execution and run assertion-reaching mutations;
+these local results alone do not establish release readiness.
 
 The layers cover core invariants, official SDK in-memory clients, ASP.NET TestServer,
 independent raw JSON-RPC against real stdio/Kestrel processes, Unix PTY operator

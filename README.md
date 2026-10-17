@@ -1,8 +1,9 @@
 # Business Data MCP
 
-> Reference implementation under verification. Runtime/build/template/Docker results
-> are pending. Actions is disabled while private; a genuine Claude GIF is optional. No release
-> readiness or executed-green-CI claim is made.
+> Local checks: 57 tests passed; real stdio/HTTP/PTY, four crash-recovery cases,
+> 16 scripted MCP assertions, renamed-template, Docker and clean-copy cold-start checks
+> passed. Independent verification remains pending. Actions is disabled
+> while private; no hosted CI or model-quality result is claimed.
 
 [MIT](LICENSE) · [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)
 
@@ -18,10 +19,10 @@ separate write permission and an explicit human approval.
 
 ## See it work
 
-The real Claude capture is pending the first verified executable. See
-[demo provenance and reproduction](docs/demo.md) for the prepared capture procedure.
-It will use actual MCP calls over stdio and only synthetic data, with a clearly
-labelled rendered conversation replay. The server itself never calls an LLM.
+The deterministic protocol demonstration below uses real MCP calls and synthetic data.
+No Claude conversation or GIF has been recorded. An optional capture requires an
+existing OAuth subscription with Extra Usage disabled; see
+[demo provenance and reproduction](docs/demo.md). The server itself never calls an LLM.
 
 Try asking:
 
@@ -265,7 +266,7 @@ per delivered order and a local operator are intentional scope choices. There is
 PostgreSQL adapter, Google Sheets integration, OAuth provider, payment gateway,
 production SLA, distributed rate limiting, tamper-evident audit or public hosted backend.
 The dataset is synthetic. This repository contains no employer/client code or identities.
-The planned demo is a repository asset; there is no paid hosting. .NET 8 is the
+An optional captured demo would be a repository asset; there is no paid hosting. .NET 8 is the
 requested target, not a claim of indefinitely supported production runtime.
 
 Built against the [official C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)
