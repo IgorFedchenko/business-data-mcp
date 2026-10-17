@@ -4,9 +4,11 @@ Run `./scripts/verify.sh` with the [required tooling](tooling.md). On Studio it 
 one heavy ticket; never nest wrappers. The suite fails on missing tools or checks.
 The local run passed 57 tests with zero failures or skips, real stdio/Kestrel/PTY and
 restart checks, four hard-crash recovery cases, 16 scripted MCP assertions and the
-renamed-template, Docker and clean-copy cold-start checks. A separate
-independent verifier must review execution and run assertion-reaching mutations;
-these local results alone do not establish release readiness.
+renamed-template, Docker and clean-copy cold-start checks. Independent verification
+removed direct-call write authorization and corrupted an authored answer fact in
+disposable copies: both mutations reached and failed the relevant assertions after
+successful builds. Unmutated and restored permission tests and all 16 scripted
+assertions passed. These local checks do not imply publication approval.
 
 The layers cover core invariants, official SDK in-memory clients, ASP.NET TestServer,
 independent raw JSON-RPC against real stdio/Kestrel processes, Unix PTY operator

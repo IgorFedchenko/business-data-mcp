@@ -2,7 +2,8 @@
 
 > Local checks: 57 tests passed; real stdio/HTTP/PTY, four crash-recovery cases,
 > 16 scripted MCP assertions, renamed-template, Docker and clean-copy cold-start checks
-> passed. Independent verification remains pending. Actions is disabled
+> passed. Independent controlled mutations confirmed direct-write permission and factual
+> answer checks detect regressions. Actions is disabled
 > while private; no hosted CI or model-quality result is claimed.
 
 [MIT](LICENSE) · [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0)

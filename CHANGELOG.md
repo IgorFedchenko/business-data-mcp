@@ -9,5 +9,6 @@
 - Real-process protocol/PTY harness, independent factual oracle and scripted offline evals.
 - Docker/template examples, reproducible verification tooling and public-only CodeQL.
 
-Release evidence is pending; see README verification status. No payment integration,
+Local verification and controlled mutation checks passed; the repository remains
+private awaiting owner review. See README verification status. No payment integration,
 public hosting, production data or model API is included.
